@@ -90,7 +90,7 @@ class NMuonBTagSelection: public uhh2::Selection {
 class MergedSelection: public uhh2::Selection {
   public:
 
-    enum mergingOpt{oFullyMerged, oMergedW, oBplusQ};
+    enum mergingOpt{oFullyMerged, oMergedW, oBplusQ, oLight, oBkg, oNotMerged, oSemiMerged};
 
     explicit MergedSelection( uhh2::Context& ctx,  const std::string ttbarGen_name_, double radius_ , mergingOpt opt_ = oFullyMerged);
     virtual bool passes(const uhh2::Event &) override;
@@ -128,4 +128,46 @@ class MassDiffSelection: public uhh2::Selection{
 };
   
 
+class DPhiMuBSelection: public uhh2::Selection{
+  public:
+
+    explicit DPhiMuBSelection(uhh2::Context& ctx, JetId btag=CSVBTag(CSVBTag::WP_MEDIUM), double dPhiMin = 0.);
+    virtual bool passes(const uhh2::Event &) override;
+    bool passes_probe(const uhh2::Event &event, const TopJet &probeJet);
+
+  private:
+    JetId btag_;
+    double dPhiMin_;
+};
+
+
+class LeadingAddJetSelection: public uhh2::Selection{
+  public:
+
+    explicit LeadingAddJetSelection(uhh2::Context& ctx, JetId btag, double ptMin);
+    virtual bool passes(const uhh2::Event &) override;
+    bool passes_probe(const uhh2::Event &event, const TopJet &probeJet);
+
+  private:
+     JetId btag_;
+     double ptMin_;
+};
+
+  /*
+class HadronicTopSelection: pubic uhh2::Selection{
+  public:
+
+    explicit HadronicTopSelection( uhh2::Context& ctx, const std::string ttbarGen_name_);
+    virtual bool passes(const uhh2::Event &) override;
+    boll passes_jet(const uhh2::Event &event, const TopJet &jet);
+
+  privte:
+    uhh2::Event::Handle<TTbarGen> h_ttbarGen;
+
+};
+  */
+
 }
+
+
+

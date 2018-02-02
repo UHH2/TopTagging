@@ -3,6 +3,8 @@
 #include "UHH2/core/include/AnalysisModule.h"
 #include "UHH2/core/include/Event.h"
 #include "UHH2/common/include/JetCorrections.h"
+//#include "UHH2/common/include/Utils.h"
+//#include <UHH2/core/include/Utils.h>
 
 class TopJetLeptonDeltaRCleaner : public uhh2::AnalysisModule {
  public:
@@ -17,9 +19,9 @@ class TopJetLeptonDeltaRCleaner : public uhh2::AnalysisModule {
 class TopJetCorrectionModules : public uhh2::AnalysisModule {
  public:
 
- enum jet_type{AK8_PUPPI, AK8_CHS, CA15_PUPPI, CA15_CHS};
+  enum jet_type{AK8_PUPPI, AK8_CHS, CA15_PUPPI, CA15_CHS, HOTVR_CHS};
 
-  explicit TopJetCorrectionModules(uhh2::Context & ctx, jet_type type = AK8_CHS);
+  explicit TopJetCorrectionModules(uhh2::Context & ctx, jet_type type = AK8_CHS, int Nsubjet = -1);
   virtual bool process(uhh2::Event & event) override;
   // void init(uhh2::Context & ctx, jet_type type);
 
@@ -37,6 +39,17 @@ class TopJetCorrectionModules : public uhh2::AnalysisModule {
 
 };
 
+
+class HOTVRPileupCorrectionModule : public uhh2::AnalysisModule {
+ public:
+  explicit HOTVRPileupCorrectionModule(uhh2::Context & ctx, bool area_correction = true): _area_correction(area_correction) {}
+  virtual bool process(uhh2::Event & event) override;
+
+ private:
+  bool _area_correction; 
+};
+
+
 class TopJetGroomer : public uhh2::AnalysisModule {
  public:
 
@@ -48,4 +61,40 @@ class TopJetGroomer : public uhh2::AnalysisModule {
 
 };
 
+bool GetLeadingBjetLepHem(const uhh2::Event &event, Jet &bjet, JetId btag);
+
+namespace JERFiles {
+ 
+  extern const std::vector<std::string> Summer16_23Sep2016_V4_BCD_L123_AK4PFPuppi_DATA;
+  extern const std::vector<std::string> Summer16_23Sep2016_V4_EF_L123_AK4PFPuppi_DATA;
+  extern const std::vector<std::string> Summer16_23Sep2016_V4_G_L123_AK4PFPuppi_DATA;
+  extern const std::vector<std::string> Summer16_23Sep2016_V4_H_L123_AK4PFPuppi_DATA;
+  extern const std::vector<std::string> Summer16_23Sep2016_V4_BCD_L123_AK8PFPuppi_DATA;
+  extern const std::vector<std::string> Summer16_23Sep2016_V4_EF_L123_AK8PFPuppi_DATA;
+  extern const std::vector<std::string> Summer16_23Sep2016_V4_G_L123_AK8PFPuppi_DATA;
+  extern const std::vector<std::string> Summer16_23Sep2016_V4_H_L123_AK8PFPuppi_DATA;
+  extern const std::vector<std::string> Summer16_23Sep2016_V4_L123_AK4PFPuppi_MC;
+  extern const std::vector<std::string> Summer16_23Sep2016_V4_L123_AK8PFPuppi_MC;
+
+  extern const std::vector<std::string> Summer16_23Sep2016_V4_BCD_L23_AK4PFchs_DATA;                                 
+  extern const std::vector<std::string> Summer16_23Sep2016_V4_EF_L23_AK4PFchs_DATA;
+  extern const std::vector<std::string> Summer16_23Sep2016_V4_G_L23_AK4PFchs_DATA;
+  extern const std::vector<std::string> Summer16_23Sep2016_V4_H_L23_AK4PFchs_DATA;
+  extern const std::vector<std::string> Summer16_23Sep2016_V4_L23_AK4PFchs_MC;
+
+  extern const std::vector<std::string> Summer16_23Sep2016_V4_BCD_L23_AK8PFchs_DATA;                                 
+  extern const std::vector<std::string> Summer16_23Sep2016_V4_EF_L23_AK8PFchs_DATA;
+  extern const std::vector<std::string> Summer16_23Sep2016_V4_G_L23_AK8PFchs_DATA;
+  extern const std::vector<std::string> Summer16_23Sep2016_V4_H_L23_AK8PFchs_DATA;
+  extern const std::vector<std::string> Summer16_23Sep2016_V4_L23_AK8PFchs_MC;
+
+
+  /*
+  extern const std::vector<std::string> Summer16_23Sep2016_V4_BCD_L1RC_AK4PFchs_DATA;
+  extern const std::vector<std::string> Summer16_23Sep2016_V4_EF_L1RC_AK4PFchs_DATA;
+  extern const std::vector<std::string> Summer16_23Sep2016_V4_G_L1RC_AK4PFchs_DATA;
+  extern const std::vector<std::string> Summer16_23Sep2016_V4_H_L1RC_AK4PFchs_DATA;
+  extern const std::vector<std::string> Summer16_23Sep2016_V4_L1RC_AK4PFchs_MC; 
+  */
+}
 

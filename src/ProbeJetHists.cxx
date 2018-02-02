@@ -14,13 +14,21 @@ using namespace uhh2examples;
 
 ProbeJetHists::ProbeJetHists(Context & ctx, const string & dirname): Hists(ctx, dirname){
 
+  fill_PDF = (ctx.get("fill_PDF", "FALSE") == "TRUE");
+  if(!(ctx.get("dataset_type") == "MC")) fill_PDF = false;
+
+  mass_scale = "default";
+  mass_scale = ctx.get("mass_scale","default");
+  
+  book<TH1F>("npv", "N_{primary vertices}",  56, -0.5, 55.5);
 
  //probe jet properties
   book<TH1F>("pt", "Probe jet p_{T} [GeV]", 200, 0., 2000);
   book<TH1F>("eta", "Probe jet #eta", 32, -3.2, 3.2);
 
   book<TH1F>("mass", "Probe jet mass [GeV]", 50, 0, 500);
-  book<TH1F>("mass_sub", "Probe jet subjet mass [GeV]", 50, 0, 500);
+  book<TH1F>("mass_sub", "Soft drop mass [GeV]", 100, 0, 500);
+
   book<TH1F>("mass_SD", "Probe jet soft drop mass raw [GeV]", 50, 0, 500);
   book<TH1F>("mass_SD_Corr", "Probe jet soft drop mass corrected [GeV]", 40, 0, 300);
   book<TH1F>("mass_pruned", "Probe jet pruned mass [GeV]", 50, 0, 500);
@@ -50,29 +58,41 @@ ProbeJetHists::ProbeJetHists(Context & ctx, const string & dirname): Hists(ctx, 
 
   book<TH1F>("Wmass", "W mass [GeV]", 50, 0., 150.);
 
+  if(fill_PDF){
+    for (unsigned i=0; i < 100; ++i) {
+      book<TH1F>("mass_sub_PDF_"+std::to_string(i), "Soft drop mass [GeV]", 100, 0, 500);
+    }
+  }
+    
   //additional variables
 
   //bjet close to muon
-  book<TH1F>("mProbe_mLep_bjet1", "m_{probe jet}/m_{b-jet+#mu} (b-jet closest to #mu)", 100, 0., 10.);
+  book<TH1F>("mProbe_mLep_bjet1", "m_{probe jet}/m_{b-jet+#mu}", 100, 0., 10.);
   book<TH1F>("mProbe_mLep_bjet_pt", "m_{probe jet}/m_{b-jet+#mu} (leading b-jet)", 100, 0., 10.);
   book<TH1F>("mProbe_mLep_bjet_CSV", "m_{probe jet}/m_{b-jet+#mu} (b-jet with highest CSV)", 100, 0., 10.);
-  book<TH1F>("ptProbe_ptLep_bjet1", "p_{T, probe jet}/p_{T, b-jet+#mu} (b-jet closest to #mu)", 100, 0., 10.);
-  book<TH1F>("dPhi_mu_b1", "#Delta#Phi(#mu, b-jet) (b-jet closest to #mu)", 50, -1, 4);
-  book<TH1F>("pt_leading_add1", "p_{T, leading additional jet} (b-jet closest to #mu) [GeV]" , 30, 0,300);
-  book<TH1F>("pt_leading_add_lep1", "p_{T, leading additional jet (lept. hem.)} (b-jet closest to #mu) [GeV]" , 30, 0,300);
-  //leading b-jet
+  book<TH1F>("ptProbe_ptLep_bjet1", "p_{T, probe jet}/p_{T, b-jet+#mu}", 100, 0., 10.);
+  book<TH1F>("dPhi_mu_b1", "#Delta#Phi(#mu, b-jet)", 50, -1, 4);
+  book<TH1F>("pt_leading_add1", "p_{T, leading additional jet} [GeV]" , 30, 0,300);
+  book<TH1F>("pt_leading_add_lep1", "p_{T, leading additional jet (lept. hem.)} [GeV]" , 30, 0,300);
+  book<TH1F>("pt_leading_addB", "p_{T, leading additional b-jet} [GeV]" , 30, 0,300);
+  book<TH1F>("pt_leading_addNoB", "p_{T, leading additional non b-jet} [GeV]" , 30, 0,300);
 
-
-
-  //highest CSV b-jet
-
+  //more subjet variables
+  book<TH1F>("mSubMax", "m_{subjet} (maximum) [GeV]" , 40, 0, 200);
+  book<TH1F>("mSub_ratio", "m_{subjet1}/m_{subjet2} (mass sorted)", 40, 0,40);
+  book<TH1F>("rel_mSub_ratio", "#frac{m_{subjet1}}{m_{subjet1}+m_{subjet2}}(mass sorted)", 50, 0, 1); 
+  book<TH1F>("ptSub_ratio", "p_{T, subjet1}/p_{T, subjet2}", 40, 0, 10);
+  book<TH1F>("rel_ptSub_ratio", "#frac{p_{T, subjet1}}{p_{T, subjet1}+p_{T, subjet2}}", 30, 0.4, 1); 
+  
+  //scatter plots
+  h_ratio_mLB_vs_mB = book<TH2D>("ratio_mLB_vs_mB", ";m_{probe jet}/m_{b-jet+#mu};m_{probe jet}/m_{b-jet}",  100, 0., 10., 1000, 0., 100.);
+  h_tau32_vs_pt = book<TH2D>("tau32_vs_pt", ";p_{T} [GeV];#tau_{3}/#tau_{2}",200, 0., 2000,  40, 0, 1);
 }
-
 
 void ProbeJetHists::fill(const Event & event){
 }
 
-void ProbeJetHists::fill_probe(const Event & event, const TopJet & jet){
+ void ProbeJetHists::fill_probe(const Event & event, const TopJet & jet){
   // fill the histograms. Please note the comments in the header file:
   // 'hist' is used here a lot for simplicity, but it will be rather
   // slow when you have many histograms; therefore, better
@@ -81,7 +101,7 @@ void ProbeJetHists::fill_probe(const Event & event, const TopJet & jet){
   // Don't forget to always use the weight when filling.
   double weight = event.weight;
 
-  
+  hist("npv")->Fill(event.pvs->size(), weight);
   hist("pt")->Fill(jet.pt(), weight);
   hist("eta")->Fill(jet.eta(), weight);
   
@@ -116,8 +136,27 @@ void ProbeJetHists::fill_probe(const Event & event, const TopJet & jet){
   }
 
   hist("mass")->Fill(jet.v4().M(), weight);
-  if(subjet_sum.isTimelike()) hist("mass_sub")->Fill(subjet_sum.M(), weight);
-  else  hist("mass_sub")->Fill(-1, weight);
+  //if(subjet_sum.isTimelike()) 
+
+  //hardcoded because of limited time (SAME VALUES IN PostSelectionModule!! ALWAYS CHANGE BOTH!)
+  double softdorpmass = subjet_sum.M();
+  if(mass_scale == "up") softdorpmass *= 1.01;
+  if(mass_scale == "down") softdorpmass *= 0.99;
+
+  hist("mass_sub")->Fill(softdorpmass, weight);
+
+  //fill pdf hists
+  if(fill_PDF){
+    const auto & sys_weights = event.genInfo->systweights();
+    float orig_weight = event.genInfo->originalXWGTUP();
+    int MY_FIRST_INDEX = 9;
+    for (unsigned i=0; i < 100; ++i) {
+      TString name = "mass_sub_PDF_"+std::to_string(i);
+      hist(name)->Fill(softdorpmass, weight * sys_weights[i+MY_FIRST_INDEX]/orig_weight);
+    }
+  }
+
+    // else  hist("mass_sub")->Fill(-1, weight);
   hist("mass_SD")->Fill(jet.softdropmass(), weight);
   hist("mass_SD_Corr")->Fill(subjet_sum.M()/jet.JEC_factor_raw(), weight);
   hist("mass_pruned")->Fill(jet.prunedmass(), weight);
@@ -131,10 +170,15 @@ void ProbeJetHists::fill_probe(const Event & event, const TopJet & jet){
   hist("tau3")->Fill(jet.tau3(), weight);
   hist("tau2")->Fill(jet.tau2(), weight);
 
+
+
   hist("CSV_topjet")->Fill(jet.btag_combinedSecondaryVertex(), weight);
 
   double highestCSV = 0;
   double pt_highestCSV = 0;
+
+  double highestSubjetMass = 0.;
+  double lowestSubjetMass = 1000.;
 
   for (const auto subjet : subjets) {
     hist("subCSV")->Fill(subjet.btag_combinedSecondaryVertex(), weight);
@@ -143,9 +187,18 @@ void ProbeJetHists::fill_probe(const Event & event, const TopJet & jet){
       highestCSV = subjet.btag_combinedSecondaryVertex();
       pt_highestCSV = subjet.pt();
     }
+    if(subjet.v4().M() > highestSubjetMass) highestSubjetMass = subjet.v4().M();
+    if(subjet.v4().M() < lowestSubjetMass) lowestSubjetMass = subjet.v4().M();
   }
   hist("subCSV_highest")->Fill(highestCSV, weight);
   hist("subjetPT")->Fill(pt_highestCSV, weight);
+
+  
+  hist("mSubMax")->Fill(highestSubjetMass, weight);
+  hist("mSub_ratio")->Fill(highestSubjetMass/lowestSubjetMass, weight);
+  hist("rel_mSub_ratio")->Fill(highestSubjetMass/subjet_sum.M(), weight);
+  if(subjets.size()>1) hist("ptSub_ratio")->Fill(subjets.at(0).pt()/subjets.at(1).pt(), weight);
+  if(subjets.size()>1) hist("rel_ptSub_ratio")->Fill(subjets.at(0).pt()/subjet_sum.Pt(), weight);
 
   JetId checkbtag=CSVBTag(CSVBTag::WP_LOOSE);
   LorentzVector v4_W(0,0,0,0);
@@ -157,6 +210,9 @@ void ProbeJetHists::fill_probe(const Event & event, const TopJet & jet){
     }
     if(N_btags >= 1) hist("Wmass")->Fill(v4_W.M(), weight);
   }
+
+  h_tau32_vs_pt->Fill(jet.pt(),jet.tau3()/jet.tau2(),weight);
+
   //======================
   //additoinal hists 
   //======================
@@ -232,6 +288,18 @@ void ProbeJetHists::fill_probe(const Event & event, const TopJet & jet){
 	add_jet_lept_maxpt = ak4jet.pt();
     }
 
+    //get additional b-jets and non bjets
+    std::vector<Jet> add_bjets;
+    std::vector<Jet> add_non_bjets;   
+    for ( const auto & ak4jet : *ak4jets ) {
+      if (deltaR(ak4jet, jet) > 0.8 && deltaR(ak4jet, bjet) > 0.1){
+	if (btag(ak4jet, event)) add_bjets.emplace_back(ak4jet);
+     	else add_non_bjets.emplace_back(ak4jet);
+      }
+    }
+    sort_by_pt(add_bjets); 
+    sort_by_pt(add_non_bjets);
+
     //fill hists
     double mProbe_mLep_bjet = jet.v4().M()/(bjet.v4()+mu.v4()).M();
     hist("mProbe_mLep_bjet1")->Fill(mProbe_mLep_bjet, weight);
@@ -248,6 +316,14 @@ void ProbeJetHists::fill_probe(const Event & event, const TopJet & jet){
     hist("dPhi_mu_b1")->Fill(deltaPhi(bjet, mu), weight);
     hist("pt_leading_add1")->Fill(add_jet_maxpt, weight);
     hist("pt_leading_add_lep1")->Fill(add_jet_lept_maxpt, weight);
+
+    if(add_bjets.size()) hist("pt_leading_addB")->Fill(add_bjets.at(0).pt(), weight);
+    else hist("pt_leading_addB")->Fill(0., weight);
+    if(add_non_bjets.size()) hist("pt_leading_addNoB")->Fill(add_non_bjets.at(0).pt(), weight);
+    else hist("pt_leading_addNoB")->Fill(0., weight);
+
+    double mProbe_mbjet = jet.v4().M()/bjet.v4().M();
+    h_ratio_mLB_vs_mB->Fill(mProbe_mLep_bjet, mProbe_mbjet, weight);
   }
 }
 

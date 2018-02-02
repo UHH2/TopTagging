@@ -1,10 +1,12 @@
 #include "UHH2/TopTagging/include/TopTaggingSelections.h"
+#include "UHH2/TopTagging/include/TopTaggingUtils.h"
 #include "UHH2/core/include/Event.h"
 
 
 #include <stdexcept>
 
 //using namespace uhh2examples;
+using namespace std;
 using namespace uhh2;
 
 
@@ -141,8 +143,11 @@ bool MergedSelection::passes(const uhh2::Event &event) {
 }
 bool MergedSelection::passes_probe(const uhh2::Event &event, const TopJet &probe_jet) {
 
-  const TTbarGen& ttbarGen = !ttbarGen_name.empty() ? event.get(h_ttbarGen) : TTbarGen(*event.genparticles,false);
+ 
+  // const TTbarGen& ttbarGen = !ttbarGen_name.empty() ? event.get(h_ttbarGen) : TTbarGen(*event.genparticles,true);
+  const auto & ttbarGen = event.get(h_ttbarGen);
 
+  
   if(ttbarGen.IsSemiLeptonicDecay()) {
     GenParticle bHad = ttbarGen.BHad();
     GenParticle q1 = ttbarGen.Q1();
@@ -154,19 +159,29 @@ bool MergedSelection::passes_probe(const uhh2::Event &event, const TopJet &probe
 	return true;
       }
     }
-    else if(opt == oMergedW) {
+    if(opt == oMergedW || opt == oSemiMerged) {
       if( deltaR(probe_jet.v4(), bHad.v4()) > radius
 	  && deltaR(probe_jet.v4(), q1.v4()) < radius
 	  && deltaR(probe_jet.v4(), q2.v4()) < radius) {
 	return true;
       }
     }
-    else if(opt == oBplusQ) {
+    if(opt == oBplusQ || opt == oSemiMerged) {
       if( deltaR(probe_jet.v4(), bHad.v4()) < radius){
 	if (deltaR(probe_jet.v4(), q1.v4()) < radius && deltaR(probe_jet.v4(), q2.v4()) > radius) return true;
 	if (deltaR(probe_jet.v4(), q1.v4()) > radius && deltaR(probe_jet.v4(), q2.v4()) < radius) return true;	
       }
     }
+    if(opt == oLight|| opt == oNotMerged) {
+      unsigned int N = 0;
+      if( deltaR(probe_jet.v4(), bHad.v4()) < radius ) N++;
+      if( deltaR(probe_jet.v4(), q1.v4()) < radius) N++;
+      if( deltaR(probe_jet.v4(), q2.v4()) < radius) N++;
+      if( N <= 1) return true;
+    }
+  }
+  else if(opt == oBkg || opt == oNotMerged) {
+    return true;
   }
   return false;
 }
@@ -255,9 +270,125 @@ bool MassDiffSelection::passes_probe(const uhh2::Event &event, const TopJet &pro
 
   double mProbe_mLep_bjet = probeJet.v4().M()/(bjet.v4()+mu.v4()).M();
 
-  if(bjet_found && mProbe_mLep_bjet > 1.2) return true;
+  if(bjet_found && mProbe_mLep_bjet > 1.) return true;
   return false;
 
 }
 
+
+DPhiMuBSelection::DPhiMuBSelection( uhh2::Context& ctx, JetId btag, double dPhiMin):  btag_(btag), dPhiMin_(dPhiMin) {}
+
+bool DPhiMuBSelection::passes(const uhh2::Event &event){
+  std::cout << "passes not used. reject all events!" << std::endl;
+  return false;
+}
+
+bool DPhiMuBSelection::passes_probe(const uhh2::Event &event, const TopJet &probeJet){
+  //get the muon
+  Muon mu = event.muons->at(0);
+  
+  //get the bjet
+  Jet bjet;
+ 
+  bool bjet_found = false; 
+  bool b_candidate_found = false;
+  
+  double max_pt = 0.;
+  std::vector<Jet> *ak4jets = event.jets;
+  double pi = 3.14159265359;
+
+  for( const auto & ak4jet : *ak4jets){
+    Jet b_candidate;
+    if( btag_(ak4jet, event) && (deltaPhi(ak4jet,mu) < (2*pi/3)) ){
+      b_candidate = ak4jet;
+      b_candidate_found = true; 
+    }
+    if(b_candidate_found){
+      if( b_candidate.pt() > max_pt){
+	bjet = b_candidate;
+	max_pt = b_candidate.pt();
+	bjet_found = true; 
+      }
+    }
+  } 
+
+  if(!b_candidate_found) std::cout << "No Bjet candidate found in event:  " << event.event << std::endl;
+  if(!bjet_found) std::cout << "No Bjet found in event: " << event.event << std::endl;
+
+  double dPhi = deltaPhi(probeJet, mu);
+
+  if(bjet_found && dPhi >  dPhiMin_) return true;
+  return false;
+
+}
+
+LeadingAddJetSelection::LeadingAddJetSelection(uhh2::Context& ctx, JetId btag, double ptMin): btag_(btag), ptMin_(ptMin) {}
+
+bool LeadingAddJetSelection::passes(const uhh2::Event &event){
+  std::cout << "passes not used. reject all events! please use passes_probe instead" << std::endl;
+  return false;
+}
+
+bool LeadingAddJetSelection::passes_probe(const uhh2::Event &event, const TopJet &probeJet){
+  Jet bjet;
+
+  bool bjet_found = GetLeadingBjetLepHem(event, bjet, btag_ );
+  if(!bjet_found) return false;
+
+  for( const auto & jet : *event.jets){
+    if(deltaR(jet, probeJet) > 0.8 && deltaR(jet, bjet) > 0.1){
+      if(jet.pt() > ptMin_) return true;
+    }
+  }
+  return false;
+}
+
+/*
+HadronicTopSelection::HadronicTopSelection( uhh2::Context& ctx, const std::string ttbarGen_name_): ttbarGen_name(ttbarGen_name_) {
+  h_ttbarGen = ctx.get_handle<TTbarGen>(ttbarGen_name);
+ } 
+
+bool HadronicTopSelection::passes(const uhh2::Event &event) {
+  return false;
+}
+bool HadronicTopSelection::passes_jet(const uhh2::Event &event, const TopJet &jet) {
+ 
+  // const TTbarGen& ttbarGen = !ttbarGen_name.empty() ? event.get(h_ttbarGen) : TTbarGen(*event.genparticles,true);
+  const auto & ttbarGen = event.get(h_ttbarGen);
+
+  vector<GenParticle> tops; 
+  double radius = 0.6;
+
+  if(IsTopHadronicDecay()) {
+    GenParticle b = ttbarGen.bTop();
+    GenParticle q1 = ttbarGen.Wdecay1();
+    GenParticle q2 = ttbarGen.Wdecay2();
+    if( deltaR(b.v4(),q1.v4()) < radius
+	&& deltaR(b.v4(), q2.v4()) < radius
+	&& deltaR(q1.v4(), q2.v4()) < radius) {
+      tops.push_back(ttbarGen.Top());
+    }
+  }
+  if(IsAntiTopHadronicDecay()) {
+    GenParticle b = ttbarGen.bAntitop();
+    GenParticle q1 = ttbarGen.WMinusdecay1();
+    GenParticle q2 = ttbarGen.WMinusdecay2();
+    if( deltaR(b.v4(),q1.v4()) < radius
+	&& deltaR(b.v4(), q2.v4()) < radius
+	&& deltaR(q1.v4(), q2.v4()) < radius) {
+      tops.push_back(ttbarGen.Antitop());
+    }
+  }
+
+  for( const auto & top : tops){
+    if(deltaR(jet.v4(),top.v4()) < radius) return true;
+  }
+
+  return false;
+}
+
+
+vector<GenParticles> GetMergedHadronicTops(TTbarGen ttbarGen, 
+*/
+    
 //};
