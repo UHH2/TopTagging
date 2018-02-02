@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE JobConfiguration PUBLIC "" "JobConfig.dtd" [
+
+<!ENTITY MC_TTbar SYSTEM "ttbar.xml">
+<!ENTITY MC_QCD_highPt SYSTEM "/nfs/dust/cms/user/dreyert/CMSSW_8_0_24_patch1/src/UHH2/common/datasets/RunII_80X_v3/MC_QCD_Pt_1000to1400_allGENparticles.xml">
+<!ENTITY MC_QCD_lowPt SYSTEM "/nfs/dust/cms/user/dreyert/CMSSW_8_0_24_patch1/src/UHH2/common/datasets/RunII_80X_v3/MC_QCD_Pt_300to470_allGENparticles.xml">
+<!ENTITY MC_Zprime_highPt SYSTEM "/nfs/dust/cms/user/dreyert/CMSSW_8_0_24_patch1/src/UHH2/common/datasets/RunII_80X_v3/Zprime/MC_ZprimeToTT_01w_M3000.xml">
+<!ENTITY MC_Zprime_lowPt SYSTEM "/nfs/dust/cms/user/dreyert/CMSSW_8_0_24_patch1/src/UHH2/common/datasets/RunII_80X_v3/Zprime/MC_ZprimeToTT_01w_M1000.xml">
+<!ENTITY InDir "/nfs/dust/cms/user/dreyert/RunII_80X_Moriond17/NewMainSelection/AK8PUPPI/">
+<!ENTITY OutDir "/nfs/dust/cms/user/dreyert/RunII_80X_Moriond17/PostSelection/AK8PUPPI/new_data/Performance/CHS/">
+
+]>
+
+<!--
+   <ConfigParse NEventsBreak="200000" LastBreak="0" FileSplit="0" />
+   <ConfigSGE RAM ="2" DISK ="2" Mail="torben.dreyer@desy.de" Notification="as" Workdir="workdir_PUPPI_PostSelection"/>
+-->
+
+<!-- OutputLevel controls which messages are printed; set to VERBOSE or DEBUG for more verbosity, to WARNING or ERROR for less -->
+<JobConfiguration JobName="ExampleCycleJob" OutputLevel="INFO">
+    <Library Name="libSUHH2TopTagging"/>
+    <Package Name="SUHH2TopTagging.par" />
+    <Library Name="libfastjet" />
+    <Library Name="libfastjettools" />
+
+    <Cycle Name="uhh2::AnalysisModuleRunner" OutputDirectory="&OutDir;" PostFix="" TargetLumi="35867" >
+   <!-- <Cycle Name="uhh2::AnalysisModuleRunner"  RunMode="PROOF" ProofServer="lite://"  ProofWorkDir="/nfs/dust/cms/user/ottjoc/proof-wd/" ProofNodes="2" OutputDirectory="./" PostFix="" TargetLumi="1" >  -->
+
+
+
+   <InputData Version="Zprime_lowPt" Lumi="92847.910" Type="MC" NEventsMax="-1" Cacheable="False"> 
+     &MC_Zprime_lowPt;
+     <InputTree Name="AnalysisTree"/>  
+   </InputData> 
+
+   <InputData Version="Zprime_highPt" Lumi="92847.910" Type="MC" NEventsMax="-1" Cacheable="False"> 
+     &MC_Zprime_highPt;
+     <InputTree Name="AnalysisTree"/>  
+   </InputData>
+
+
+   <InputData Version="QCD_lowPt" Lumi="1." Type="MC" NEventsMax="1000000" Cacheable="False">
+     &MC_QCD_lowPt;
+     <InputTree Name="AnalysisTree"/>
+   </InputData>
+
+   <InputData Version="QCD_highPt" Lumi="1." Type="MC" NEventsMax="1000000" Cacheable="False">
+     &MC_QCD_highPt;
+     <InputTree Name="AnalysisTree"/>
+   </InputData>
+
+        <UserConfig>
+            <!-- define which collections to read from the input. Only specify what you need to save I/O time -->
+
+	    <Item Name="PrimaryVertexCollection" Value="offlineSlimmedPrimaryVertices" /> 
+            <Item Name="ElectronCollection" Value="slimmedElectronsUSER" />
+            <Item Name="MuonCollection" Value="slimmedMuonsUSER" /> 
+            <Item Name="JetCollection" Value="slimmedJets" />
+            <Item Name="METName" Value="slimmedMETs" />  
+            <Item Name="GenJetCollection" Value="slimmedGenJets" />
+	<!--	    <Item Name="TopJetCollection" Value="HOTVRTopJets" />--> 	
+      	    <Item Name="TopJetCollection" Value="slimmedJetsAK8_SoftDrop" /> 
+   <!--   <Item Name="TopJetCollection" Value="patJetsAk8PuppiJetsSoftDropPacked_daughters" /> -->
+            <Item Name="GenTopJetCollection" Value="ak8GenJetsSoftDrop" />
+
+       <!--     <Item Name="GenTopJetCollection" Value="slimmedGenJetsAK8" /> -->
+	    <Item Name="additionalBranches" Value="slimmedJetsAK8_SoftDrop slimmedGenJetsAK8" />
+	
+ <!-- 	    <Item Name="TopJetCollection" Value="patJetsHepTopTagCHSPacked_daughters" />-->
+<!--	    <Item Name="TopJetCollection" Value="patJetsHepTopTagPuppiPacked_daughters" />-->
+            <Item Name="GenParticleCollection" Value="GenParticles" /> 
+ 
+	    <Item Name="OutputPath" Value="&OutDir;"/>
+
+
+	    <Item Name="lumihists_lumi_per_bin" Value="1"/>
+
+            <!-- the class name of the AnalysisModule subclasses to run: -->
+            <Item Name="AnalysisModule" Value="PerformanceModule" /> 
+            
+            <!-- tell AnalysisModuleRunner NOT to use the MC event weight from SFrame; rather let
+                 MCLumiWeight (called via CommonModules) calculate the MC event weight. The MC
+                 event weight assigned by MCLumiWeight is InputData.Lumi / Cycle.TargetLumi. -->
+            <Item Name="use_sframe_weight" Value="false" />
+            
+            <!-- configuration for MCPileupReweight (run as part of CommonModules): -->
+            <!--   <Item Name="pileup_directory" Value="" /> -->
+
+	    <Item Name="pileup_directory_data" Value="/nfs/dust/cms/user/dreyert/CMSSW_8_0_24_patch1/src/UHH2/common/data/MyDataPileupHistogram.root"/>
+	    <Item Name="pileup_directory_25ns" Value="/nfs/dust/cms/user/dreyert/CMSSW_8_0_24_patch1/src/UHH2/common/data/MyMCPileupHistogram.root"/>
+
+
+	    <Item Name="pileup_directory_data_up" Value="/nfs/dust/cms/user/dreyert/CMSSW_8_0_24_patch1/src/UHH2/common/data/MyDataPileupHistogram_72383.root"/>
+	    <Item Name="pileup_directory_data_down" Value="/nfs/dust/cms/user/dreyert/CMSSW_8_0_24_patch1/src/UHH2/common/data/MyDataPileupHistogram_66017.root"/>
+	    
+	    <Item Name="lumi_file" Value="/nfs/dust/cms/user/dreyert/CMSSW_8_0_24_patch1/src/UHH2/common/data/Cert_271036-284044_13TeV_23Sep2016ReReco_Collisions16_JSON.root"/>
+
+            <Item Name="BTagCalibration" Value="/nfs/dust/cms/user/dreyert/CMSSW_8_0_24_patch1/src/UHH2/common/data/CSVv2_Moriond17_B_H.csv"/>
+	    <Item Name="MCBtagEfficiencies" Value="/nfs/dust/cms/user/dreyert/CMSSW_8_0_24_patch1/src/UHH2/scripts/BTagMCEfficiencyHistsBTagMedium_PUPPI_Moriond.root" />
+
+	    <Item Name="SubjetBTagCalibration" Value="/nfs/dust/cms/user/dreyert/CMSSW_8_0_24_patch1/src/UHH2/common/data/subjet_CSVv2_Moriond17_B_H.csv"/>
+	    <Item Name="MCSubjetBtagEfficiencies" Value="/nfs/dust/cms/user/dreyert/CMSSW_8_0_24_patch1/src/UHH2/scripts/BTagMCEfficiencyHistsSubjetBTag_PUPPI_Moriond.root" />
+
+
+            <!-- Some test configuration; see TopTaggingStudiesModule.cxx for how to access it: -->
+           <!--  <Item Name="Trigger" Value="HLT_Mu45_eta2p1_v*" />-->
+            <Item Name="useHTT" Value="FALSE" /> 
+            <Item Name="usePUPPI" Value="FAlSE" />
+	    <Item Name="TopJetCorrectionMode" Value="TOP" />
+	    <Item Name="MergedSelection" Value="all" />
+<!--		   <Item Name="MergedSelection" Value="bkg" />
+	    <Item Name="MergedSelection" Value="mergedW" />
+	    <Item Name="MergedSelection" Value="mergedQB" />
+	    <Item Name="MergedSelection" Value="light" /> -->
+      <!--     <Item Name="usePUPPI" Value="FALSE" />-->
+
+      <!-- sysvar --> 
+
+            <Item Name="BTag_variation" Value="central"/>
+	    <Item Name="SubjetBTag_variation" Value="central"/>
+	    
+	    <Item Name="MuonID_variation" Value="none" />
+	    <Item Name="MuonTrigger_variation" Value="none" />
+	    
+	    <Item Name="PU_variation" Value="central"/>
+	    
+	    <Item Name="ScaleVariationMuR" Value="none" />
+	    <Item Name="ScaleVariationMuF" Value="none" />
+	    
+	    <Item Name="fill_PDF" Value="FALSE"/>
+	    <Item Name="TopPtReweight" Value="FALSE"/>
+      
+        </UserConfig>
+    </Cycle>
+</JobConfiguration>
