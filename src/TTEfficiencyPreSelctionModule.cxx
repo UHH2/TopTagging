@@ -10,7 +10,7 @@
 #include "UHH2/common/include/EventHists.h"
 #include "UHH2/common/include/JetHists.h"
 #include "UHH2/common/include/LuminosityHists.h"
-#include <UHH2/common/include/JetCorrections.h>
+//#include <UHH2/common/include/JetCorrections.h>
 #include <UHH2/common/include/ObjectIdUtils.h>
 #include <UHH2/common/include/MuonIds.h>
 #include <UHH2/common/include/ElectronIds.h>
@@ -51,13 +51,6 @@ private:
 
 TTEfficiencyPreSelectionModule::TTEfficiencyPreSelectionModule(Context & ctx){
 
-    
-  cout << "Hello World from TTEfficiencyPreSelectionModule!" << endl;
- 
-  // If needed, access the configuration of the module here, e.g.:
-  string testvalue = ctx.get("TestKey", "<not set>");
-  cout << "TestKey in the configuration was: " << testvalue << endl;
-
   const bool isMC = (ctx.get("dataset_type") == "MC");
 
   MuonId muid = AndId<Muon>(MuonIDTight(), PtEtaCut(55., 2.4));
@@ -73,7 +66,7 @@ TTEfficiencyPreSelectionModule::TTEfficiencyPreSelectionModule(Context & ctx){
   common->switch_metcorrection();
 
   common->disable_mcpileupreweight();
-  common->disable_jersmear();
+  //common->disable_jersmear();
 
   common->init(ctx);
   cout << "common init" <<endl;
@@ -140,7 +133,6 @@ bool TTEfficiencyPreSelectionModule::process(Event & event) {
 
   event.met->set_pt(uncleaned_met->pt());
   event.met->set_phi(uncleaned_met->phi());
-
 
   // fill histograms after preselection
   for(auto & h : hists_after_presel){
