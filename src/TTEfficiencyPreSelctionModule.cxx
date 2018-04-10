@@ -54,6 +54,8 @@ TTEfficiencyPreSelectionModule::TTEfficiencyPreSelectionModule(Context & ctx){
   MuonId muid = AndId<Muon>(MuonID(Muon::CutBasedIdTight), PtEtaCut(55., 2.4));
   ElectronId eleid = AndId<Electron>(ElectronID_Spring16_medium_noIso, PtEtaCut(55., 2.4));
 
+  bool isMC = (ctx.get("dataset_type") == "MC");
+ 
   common.reset(new CommonModules());
 
   common->set_muon_id(muid);
