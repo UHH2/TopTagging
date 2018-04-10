@@ -6,7 +6,6 @@
 #include "UHH2/common/include/CommonModules.h"
 #include <UHH2/common/include/Utils.h>
 #include "UHH2/common/include/TTbarGen.h"
-#include "core/include/SCycleBase.h"
 #include "UHH2/TopTagging/include/TopTaggingUtils.h"
 
 #include <TTree.h>
@@ -54,7 +53,7 @@ private:
   double gen_pt, gen_eta, gen_phi;
 
   //CMSTopTaggerV2 vriables
-  double clf_softdropmass, clf_tau32, clf_highestSjCSV;
+  double clf_softdropmass, clf_tau32, clf_highestSjCSV, clf_softdropmass_uncorrected;
 
   //HOTVR variables
   int clf_Nsubjets;
@@ -64,6 +63,7 @@ private:
   TString fileName;
   bool usePUPPI;
   bool useHOTVR;
+  bool useJetFlavor;
  
 };
 
@@ -77,17 +77,20 @@ PerformanceModule::PerformanceModule(Context & ctx){
   usePUPPI = (ctx.get("usePUPPI", "<not set>") == "TRUE");
   useHOTVR = (ctx.get("useHOTVR", "<not set>") == "TRUE");
 
+  useJetFlavor = (ctx.get("useJetFlavor", "<not set>") == "TRUE");
+
   //JEC and JER settings 
   if(usePUPPI) topjet_corr.reset(new TopJetCorrectionModules(ctx, TopJetCorrectionModules::AK8_PUPPI));
   else if(useHOTVR && !usePUPPI) topjet_corr.reset(new TopJetCorrectionModules(ctx, TopJetCorrectionModules::HOTVR_CHS));
   else topjet_corr.reset(new TopJetCorrectionModules(ctx, TopJetCorrectionModules::AK8_CHS));
 
-  HOTVR_pileupCorrector.reset(new HOTVRPileupCorrectionModule(ctx));
+  HOTVR_pileupCorrector.reset(new HOTVRPileupCorrectionModule());
 
   add_genjet = ctx.get_handle<std::vector<Particle>>("slimmedGenJetsAK8");
   topjetJER_smearer.reset(new GenericJetResolutionSmearer(ctx, "topjets", "slimmedGenJetsAK8", false));
   
   topjet_groomer.reset(new TopJetGroomer()); // just take the subjet sum (make sure that the subjets are corrected properly)
+  // topjet_groomer.reset(new TopJetGroomer(false)); // just take the subjet sum (uncorrected!!!!!)
 
   //ttbar gen settings
   ttbarGenProducer.reset(new TTbarGenProducer(ctx, "ttbargen", true));
@@ -119,6 +122,7 @@ PerformanceModule::PerformanceModule(Context & ctx){
     _flatTree->Branch("clf_tau32_groomed" , &clf_tau32_groomed , "clf_tau32_groomed/D");
   }else{
     _flatTree->Branch("clf_softdropmass", &clf_softdropmass, "clf_softdropmass/D");
+    _flatTree->Branch("clf_softdropmass_uncorrected", &clf_softdropmass_uncorrected, "clf_softdropmass_uncorrected/D");
     _flatTree->Branch("clf_tau32", &clf_tau32, "clf_tau32/D");
     _flatTree->Branch("clf_highestSjCSV", &clf_highestSjCSV, "clf_highestSjCSV/D");
   }  
@@ -183,28 +187,37 @@ bool PerformanceModule::FillTree(const Event & event, GenParticle part, int Npar
   bool matchedJet = false;
   double radius = 0.6;
   TopJet jet; 
-
+ 
+  double mindR = 0.6;
+  // double maxPt = 1.;
   for( const auto & topjet : topjets){
-    if(deltaR( topjet.v4(), part.v4()) < radius){
-      jet = topjet;
-      matchedJet = true;
+    double dR = deltaR( topjet.v4(), part.v4());
+    if(dR < radius){
+      if(dR < mindR){
+	//if(topjet.pt() > maxPt){
+	if(matchedJet) cout << "more than one jet to match" << endl;
+	jet = topjet;
+	mindR = dR;
+	//maxPt = topjet.pt();
+	matchedJet = true;
+      }
     }
   } 
 
-  if(!matchedJet){
+  //  if(!matchedJet){
     // cout << "no jet matched to the particle" << endl;
-    return false;
-  }
+  //   return false;
+  // }
 
   //----------------------------------------------
   //for QCD only use jet with unique parton falvor
   //----------------------------------------------
   //jet hadron falvor and parton falvor are just stored for CHS TopJets in 2016 MC. Therfore a CHS jet is matched to the PUPPI jet to obtain the flavor information. 
   // this should be fixed with 2017 MC 
-  if(version.Contains("QCD")){
+  if(useJetFlavor && matchedJet && version.Contains("QCD")){
 
     int parton_flavor = 0;
-    int hadron_flavor = 0;
+    //  int hadron_flavor = 0;
     if(usePUPPI || useHOTVR){
       const vector<TopJet> & CHSJets = event.get(h_CHSTopJets);
       bool matched_CHSjet = false; 
@@ -215,7 +228,7 @@ bool PerformanceModule::FillTree(const Event & event, GenParticle part, int Npar
 	  if(matched_CHSjet) cout << "more than one CHS candidate" << endl;
 	  matched_CHSjet = true;
 	  parton_flavor = CHSJet.pdgId();
-	  hadron_flavor = CHSJet.pdgId();
+	  //  hadron_flavor = CHSJet.pdgId();
 	}
       }  
       if(!matched_CHSjet){
@@ -225,7 +238,10 @@ bool PerformanceModule::FillTree(const Event & event, GenParticle part, int Npar
     }else{
       parton_flavor = jet.pdgId();
     }
-    if(part.pdgId() != parton_flavor ) return false;
+    if(part.pdgId() != parton_flavor ){
+      // cout << "wrong jet flavor" <<endl;
+      return false;
+    }
   }
 
 
@@ -258,7 +274,7 @@ vector<GenParticle> PerformanceModule::GetQuarksAndGluons(vector<GenParticle> ge
   for(const auto & part : genpaticles){
     int absId = fabs(part.pdgId());
 
-    if( (absId < 4 || absId == 21) 
+    if( (absId < 6 || absId == 21) 
 	&& part.status() == 23
 	&& part.pt() > ptMin 
 	&& part.pt() < ptMax 
@@ -317,6 +333,7 @@ vector<GenParticle> PerformanceModule::GetMergedHadronicTops(TTbarGen ttbarGen, 
 
 }
 
+
 bool PerformanceModule::SetCMSTTv2Variables(const TopJet jet){
   auto subjets = jet.subjets();
 
@@ -325,7 +342,13 @@ bool PerformanceModule::SetCMSTTv2Variables(const TopJet jet){
     subjet_sum += s.v4();
   }
 
+  LorentzVector subjet_sumUNCORR(0,0,0,0);
+  for (const auto s : subjets) {
+    subjet_sumUNCORR += s.v4()*s.JEC_factor_raw();
+  }
+
   clf_softdropmass = subjet_sum.M();
+  clf_softdropmass_uncorrected = subjet_sumUNCORR.M();
   clf_tau32 = jet.tau3()/jet.tau2();
 
   double highestCSV = -10;
@@ -335,23 +358,32 @@ bool PerformanceModule::SetCMSTTv2Variables(const TopJet jet){
   }
 
   clf_highestSjCSV = highestCSV;
+
+  return true;
 } 
 
 bool PerformanceModule::SetHOTVRVariables(const TopJet jet){
 
-  auto subjets = jet.subjets();
-  sort_by_pt(subjets);
-  
-  clf_Nsubjets = subjets.size();
-    
-  clf_fpt = subjets.at(0).pt()/jet.pt();
-  
   double m12 = 0., m13 = 0., m23 = 0.;
-  if(clf_Nsubjets > 2){
-    m12 = (subjets.at(0).v4() + subjets.at(1).v4()).M();
-    m13 = (subjets.at(0).v4() + subjets.at(2).v4()).M();
-    m23 = (subjets.at(1).v4() + subjets.at(2).v4()).M();
-  }
+
+  if(jet.subjets().size()){
+    auto subjets = jet.subjets();
+    sort_by_pt(subjets);
+  
+    clf_Nsubjets = subjets.size();
+    
+    clf_fpt = subjets.at(0).pt()/jet.pt();
+
+    if(clf_Nsubjets > 2){
+      m12 = (subjets.at(0).v4() + subjets.at(1).v4()).M();
+      m13 = (subjets.at(0).v4() + subjets.at(2).v4()).M();
+      m23 = (subjets.at(1).v4() + subjets.at(2).v4()).M();
+    }
+  }else{
+    clf_Nsubjets = 0;
+    clf_fpt = 0;
+  }  
+  
   clf_mpair = min(min(m12, m13), m23);
     
   clf_jetmass = jet.v4().M();

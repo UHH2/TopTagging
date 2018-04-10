@@ -141,6 +141,8 @@ MergedSelection::MergedSelection( uhh2::Context& ctx, const std::string ttbarGen
 bool MergedSelection::passes(const uhh2::Event &event) {
   return false;
 }
+
+
 bool MergedSelection::passes_probe(const uhh2::Event &event, const TopJet &probe_jet) {
 
  
@@ -229,7 +231,7 @@ bool DecayChannelSelection::passes(const uhh2::Event &event) {
   return false;
 }
 
-MassDiffSelection::MassDiffSelection( uhh2::Context& ctx, JetId btag):  btag_(btag) {}
+MassDiffSelection::MassDiffSelection(JetId btag):  btag_(btag) {}
 
 bool MassDiffSelection::passes(const uhh2::Event &event){
   std::cout << "passes not used. reject all events!" << std::endl;
@@ -276,7 +278,7 @@ bool MassDiffSelection::passes_probe(const uhh2::Event &event, const TopJet &pro
 }
 
 
-DPhiMuBSelection::DPhiMuBSelection( uhh2::Context& ctx, JetId btag, double dPhiMin):  btag_(btag), dPhiMin_(dPhiMin) {}
+DPhiMuBSelection::DPhiMuBSelection( JetId btag, double dPhiMin):  btag_(btag), dPhiMin_(dPhiMin) {}
 
 bool DPhiMuBSelection::passes(const uhh2::Event &event){
   std::cout << "passes not used. reject all events!" << std::endl;
@@ -322,7 +324,7 @@ bool DPhiMuBSelection::passes_probe(const uhh2::Event &event, const TopJet &prob
 
 }
 
-LeadingAddJetSelection::LeadingAddJetSelection(uhh2::Context& ctx, JetId btag, double ptMin): btag_(btag), ptMin_(ptMin) {}
+LeadingAddJetSelection::LeadingAddJetSelection( JetId btag, double ptMin): btag_(btag), ptMin_(ptMin) {}
 
 bool LeadingAddJetSelection::passes(const uhh2::Event &event){
   std::cout << "passes not used. reject all events! please use passes_probe instead" << std::endl;

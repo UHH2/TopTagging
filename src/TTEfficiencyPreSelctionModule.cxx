@@ -51,8 +51,6 @@ private:
 
 TTEfficiencyPreSelectionModule::TTEfficiencyPreSelectionModule(Context & ctx){
 
-  const bool isMC = (ctx.get("dataset_type") == "MC");
-
   MuonId muid = AndId<Muon>(MuonIDTight(), PtEtaCut(55., 2.4));
   ElectronId eleid = AndId<Electron>(ElectronID_Spring16_medium_noIso, PtEtaCut(55., 2.4));
 

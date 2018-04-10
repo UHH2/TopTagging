@@ -118,8 +118,7 @@ class DecayChannelSelection: public uhh2::Selection {
 
 class MassDiffSelection: public uhh2::Selection{
   public:
-
-    explicit MassDiffSelection(uhh2::Context& ctx, JetId btag=CSVBTag(CSVBTag::WP_MEDIUM));
+    explicit MassDiffSelection( JetId btag=CSVBTag(CSVBTag::WP_MEDIUM));
     virtual bool passes(const uhh2::Event &) override;
     bool passes_probe(const uhh2::Event &event, const TopJet &probeJet);
 
@@ -130,8 +129,7 @@ class MassDiffSelection: public uhh2::Selection{
 
 class DPhiMuBSelection: public uhh2::Selection{
   public:
-
-    explicit DPhiMuBSelection(uhh2::Context& ctx, JetId btag=CSVBTag(CSVBTag::WP_MEDIUM), double dPhiMin = 0.);
+    explicit DPhiMuBSelection( JetId btag=CSVBTag(CSVBTag::WP_MEDIUM), double dPhiMin = 0.);
     virtual bool passes(const uhh2::Event &) override;
     bool passes_probe(const uhh2::Event &event, const TopJet &probeJet);
 
@@ -144,7 +142,7 @@ class DPhiMuBSelection: public uhh2::Selection{
 class LeadingAddJetSelection: public uhh2::Selection{
   public:
 
-    explicit LeadingAddJetSelection(uhh2::Context& ctx, JetId btag, double ptMin);
+    explicit LeadingAddJetSelection( JetId btag, double ptMin);
     virtual bool passes(const uhh2::Event &) override;
     bool passes_probe(const uhh2::Event &event, const TopJet &probeJet);
 

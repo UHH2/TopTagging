@@ -31,7 +31,7 @@ bool TopJetLeptonDeltaRCleaner::process(uhh2::Event & event) {
   return true;
 }
 
-TopJetCorrectionModules::TopJetCorrectionModules(uhh2::Context & ctx, jet_type type, int Nsubjet) {
+TopJetCorrectionModules::TopJetCorrectionModules(uhh2::Context & ctx, jet_type type) {
 
   _type = type;
   is_mc = ctx.get("dataset_type") == "MC";
@@ -137,9 +137,6 @@ bool TopJetCorrectionModules::process(uhh2::Event & event) {
 }
 
 
-
-//HOTVRPileupCorrectionModule::HOTVRPileupCorrectionModule(uhh2::Context & ctx, bool area_correction){}
-
 bool HOTVRPileupCorrectionModule::process(uhh2::Event & event){
 
   double rho = event.rho;
@@ -162,7 +159,7 @@ bool HOTVRPileupCorrectionModule::process(uhh2::Event & event){
     topjet.set_subjets(move(subjets));
   }
 
-
+  return true;
 }
 
 

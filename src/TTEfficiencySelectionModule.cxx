@@ -63,8 +63,9 @@ private:
   std::unique_ptr<AndSelection> first_selection;
 
   std::unique_ptr<uhh2::Selection> hadronic_selection, lepton_jets_seletion, dilepton_selection, tau_jets_selection; 
-  std::unique_ptr<MergedSelection> merged_selection, mergedW_selection, mergedQB_selection; 
+  std::unique_ptr<MergedSelection> merged_selection, mergedW_selection, mergedQB_selection, mergedEvent_Selection; 
   std::unique_ptr<MassDiffSelection> massDiff_selection;
+  std::unique_ptr<DPhiMuBSelection> dphi_selection;
 
   //histograms
   std::unique_ptr<BTagMCEfficiencyHists> hists_btag_eff, hists_btag_medium_eff, hists_subjet_btag_eff;
@@ -83,6 +84,7 @@ private:
   string version;
 
   bool isMC;
+  bool invert_merged_selection;
 
 };
 
@@ -110,6 +112,8 @@ TTEfficiencySelectionModule::TTEfficiencySelectionModule(Context & ctx){
   else cout << "run CMS tagger" << endl;
 
   version = ctx.get("dataset_version", "");
+
+  string merged = ctx.get("MergedSelection", "<not set>");
 
   subjet_correction = false; 
   string correction_mode = ctx.get("TopJetCorrectionMode", "<not set>");
@@ -148,7 +152,7 @@ TTEfficiencySelectionModule::TTEfficiencySelectionModule(Context & ctx){
   if(usePUPPI) topjet_corr.reset(new TopJetCorrectionModules(ctx, TopJetCorrectionModules::AK8_PUPPI));
   else topjet_corr.reset(new TopJetCorrectionModules(ctx, TopJetCorrectionModules::AK8_CHS));
 
-  topjetJER_smearer.reset(new GenericJetResolutionSmearer(ctx, "topjets", "gentopjets", false));
+  // topjetJER_smearer.reset(new GenericJetResolutionSmearer(ctx, "topjets", "gentopjets", false));
 
   if(subjet_correction) topjet_groomer.reset(new TopJetGroomer()); // just take the subjet sum (make sure that the subjets are corrected properly)
   else topjet_groomer.reset(new TopJetGroomer(false)); //undo the subjet JEC corrections in case you want to correct the resulting subjet sum
@@ -218,9 +222,19 @@ TTEfficiencySelectionModule::TTEfficiencySelectionModule(Context & ctx){
   merged_selection.reset( new MergedSelection(ctx, "ttbargen", jet_radius));
   mergedW_selection.reset( new MergedSelection(ctx, "ttbargen", jet_radius, MergedSelection::oMergedW));
   mergedQB_selection.reset( new MergedSelection(ctx, "ttbargen", jet_radius, MergedSelection::oBplusQ));
+  /*
+  if (merged == "mergedTop" || merged == "notmergedTop") mergedEventSelction.reset( new MergedSelection(ctx, "ttbargen", jet_radius));
+  else if (merged == "mergedW") mergedEventSelction.reset( new MergedSelection(ctx, "ttbargen", jet_radius, MergedSelection::oMergedW));
+  else if (merged == "mergedQB") mergedEventSelction.reset( new MergedSelection(ctx, "ttbargen", jet_radius, MergedSelection::oBplusQ));
+  else if (merged == "light") mergedEventSelction.reset( new MergedSelection(ctx, "ttbargen", jet_radius, MergedSelection::oLight));
+
+  invert_merged_selection = false;
+  if (merged == "notmergedTop") invert_merged_selection = true;
+  */
 
   //mass diff selection
-   massDiff_selection.reset( new MassDiffSelection(ctx) );
+   massDiff_selection.reset( new MassDiffSelection() );
+   dphi_selection.reset(new DPhiMuBSelection( CSVBTag(CSVBTag::WP_MEDIUM), 1.2));
                   
   //histograms
   hists_btag_eff.reset(new BTagMCEfficiencyHists(ctx,"BTagLoose",CSVBTag::WP_LOOSE));
@@ -376,7 +390,7 @@ bool TTEfficiencySelectionModule::process(Event & event) {
   for(auto & topjet : *topjets){
     double pi = 3.14159265359;
     double delPhi = deltaPhi(topjet, muons->at(0));
-    if(delPhi > ((2/3)*pi)){
+    if(delPhi > ((2./3.)*pi)){
       probe_jet = topjet;
       probejet_found = true;
       break;
@@ -387,8 +401,13 @@ bool TTEfficiencySelectionModule::process(Event & event) {
     //   cout << "WARNING: no probe jet found"<< endl;
     return false;
   }
-
- 
+  /*
+  if(invert_merged_selection){ 
+    if(mergedEvent_selection->passes_probe(event, probe_jet)) return false;
+  }else{
+    if(!mergedEvent_selection->passes_probe(event, probe_jet)) return false;
+  }
+  */
   //topjet_corrector->process(event);
   //=================================
   //define working points and tags
@@ -448,6 +467,7 @@ bool TTEfficiencySelectionModule::process(Event & event) {
 
   if(probe_jet.v4().M()<10) return false; //mild mass cut on the denominator 
   //if(!massDiff_selection->passes_probe(event, probe_jet)) return false;
+  //if(!dphi_selection->passes_probe(event, probe_jet)) return false;
   //===================
   //fill the histograms
   //===================

@@ -145,11 +145,11 @@ TTEfficiencyMainSelectionModule::TTEfficiencyMainSelectionModule(Context & ctx){
   // corrections
   //=============================
 
-  int Nsubjet = -1;
-  TString CorrectSubjet = ctx.get("CorrectSubjet", "all");
-  if (CorrectSubjet == "first") Nsubjet = 0;
-  if (CorrectSubjet == "second") Nsubjet = 1;
-  if (CorrectSubjet == "anti") Nsubjet = -2;
+  //int Nsubjet = -1;
+  //TString CorrectSubjet = ctx.get("CorrectSubjet", "all");
+  //if (CorrectSubjet == "first") Nsubjet = 0;
+  //if (CorrectSubjet == "second") Nsubjet = 1;
+  //if (CorrectSubjet == "anti") Nsubjet = -2;
 
   //common modules
   common.reset(new CommonModules());
@@ -163,8 +163,8 @@ TTEfficiencyMainSelectionModule::TTEfficiencyMainSelectionModule(Context & ctx){
   common->init(ctx, PU_variation);
   cout << "common init" <<endl;
  
-  if(usePUPPI) topjet_corr.reset(new TopJetCorrectionModules(ctx, TopJetCorrectionModules::AK8_PUPPI, Nsubjet));
-  else topjet_corr.reset(new TopJetCorrectionModules(ctx, TopJetCorrectionModules::AK8_CHS, Nsubjet));
+  if(usePUPPI) topjet_corr.reset(new TopJetCorrectionModules(ctx, TopJetCorrectionModules::AK8_PUPPI));
+  else topjet_corr.reset(new TopJetCorrectionModules(ctx, TopJetCorrectionModules::AK8_CHS));
 
   if(isMC) {
     add_genjet = ctx.get_handle<std::vector<Particle>>("slimmedGenJetsAK8");
@@ -244,8 +244,8 @@ TTEfficiencyMainSelectionModule::TTEfficiencyMainSelectionModule(Context & ctx){
 
 
   //mass diff selection
-  massDiff_selection.reset( new MassDiffSelection(ctx) );
-  dphi_selection.reset(new DPhiMuBSelection(ctx, CSVBTag(CSVBTag::WP_MEDIUM), 1.2));
+  massDiff_selection.reset( new MassDiffSelection() );
+  dphi_selection.reset(new DPhiMuBSelection(CSVBTag(CSVBTag::WP_MEDIUM), 1.2));
        
 
   //=============================         

@@ -21,9 +21,9 @@ class TopJetCorrectionModules : public uhh2::AnalysisModule {
 
   enum jet_type{AK8_PUPPI, AK8_CHS, CA15_PUPPI, CA15_CHS, HOTVR_CHS};
 
-  explicit TopJetCorrectionModules(uhh2::Context & ctx, jet_type type = AK8_CHS, int Nsubjet = -1);
+  explicit TopJetCorrectionModules(uhh2::Context & ctx, jet_type type = AK8_CHS);
   virtual bool process(uhh2::Event & event) override;
-  // void init(uhh2::Context & ctx, jet_type type);
+
 
 
  private:
@@ -42,7 +42,7 @@ class TopJetCorrectionModules : public uhh2::AnalysisModule {
 
 class HOTVRPileupCorrectionModule : public uhh2::AnalysisModule {
  public:
-  explicit HOTVRPileupCorrectionModule(uhh2::Context & ctx, bool area_correction = true): _area_correction(area_correction) {}
+  explicit HOTVRPileupCorrectionModule(bool area_correction = true): _area_correction(area_correction) {}
   virtual bool process(uhh2::Event & event) override;
 
  private:

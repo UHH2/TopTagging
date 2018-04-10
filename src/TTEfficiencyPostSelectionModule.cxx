@@ -233,9 +233,9 @@ TTEfficiencyPostSelectionModule::TTEfficiencyPostSelectionModule(Context & ctx){
   //additional selections
   //===========================
 
-  massDiff_selection.reset( new MassDiffSelection(ctx) );
-  dphi_selection.reset(new DPhiMuBSelection(ctx, CSVBTag(CSVBTag::WP_MEDIUM), 1.2));
-  addJet_selection.reset(new LeadingAddJetSelection(ctx, CSVBTag(CSVBTag::WP_MEDIUM), 50));
+  massDiff_selection.reset( new MassDiffSelection() );
+  dphi_selection.reset(new DPhiMuBSelection( CSVBTag(CSVBTag::WP_MEDIUM), 1.2));
+  addJet_selection.reset(new LeadingAddJetSelection( CSVBTag(CSVBTag::WP_MEDIUM), 50));
 
 
   //===========================
