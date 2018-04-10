@@ -125,7 +125,7 @@ TTEfficiencySelectionModule::TTEfficiencySelectionModule(Context & ctx){
 
 
   //MuonId muid = AndId<Muon>(MuonIDMedium_ICHEP(), PtEtaCut(50., 2.1));
-  MuonId muid = AndId<Muon>(MuonIDTight(), PtEtaCut(55., 2.4));
+  MuonId muid = AndId<Muon>(MuonID(Muon::CutBasedIdTight), PtEtaCut(55., 2.4));
 
   ElectronId eleid = AndId<Electron>(ElectronID_Spring16_medium_noIso, PtEtaCut(55., 2.4));
   //ElectronId eleid = AndId<Electron>(ElectronID_MVAGeneralPurpose_Spring16_tight, PtEtaCut(50., 2.1));
@@ -181,9 +181,9 @@ TTEfficiencySelectionModule::TTEfficiencySelectionModule(Context & ctx){
   if (version == "TTbar_Incl" ) mttgen_sel.reset(new MttbarGenSelection(0., 700.));
 
   //  btagwAK8.reset(new MCBTagScaleFactor(ctx, CSVBTag::WP_LOOSE, "jets","central","mujets","incl","MCBtagEfficiencies"));
-  btagwAK8.reset(new MCBTagScaleFactor(ctx, CSVBTag::WP_MEDIUM, "jets","central","mujets","incl","MCBtagEfficiencies"));
+  //btagwAK8.reset(new MCBTagScaleFactor(ctx, CSVBTag::WP_MEDIUM, "jets","central","mujets","incl","MCBtagEfficiencies"));
 
-  subjet_btagwAK8.reset(new MCBTagScaleFactor(ctx, CSVBTag::WP_LOOSE, "topjets","central","lt","incl","MCSubjetBtagEfficiencies","", "SubjetBTagCalibration"));//,"SubjetBTagCalibration"));
+  //subjet_btagwAK8.reset(new MCBTagScaleFactor(ctx, CSVBTag::WP_LOOSE, "topjets","central","lt","incl","MCSubjetBtagEfficiencies","", "SubjetBTagCalibration"));//,"SubjetBTagCalibration"));
 
   muo_tight_noniso_SF.reset(new MCMuonScaleFactor(ctx,"/nfs/dust/cms/user/dreyert/CMSSW_8_0_24_patch1/src/UHH2/common/data//MuonID_EfficienciesAndSF_average_RunBtoH.root","MC_NUM_TightID_DEN_genTracks_PAR_pt_eta",1, "tightID"));
   muo_trigger_SF.reset(new MCMuonScaleFactor(ctx,"/nfs/dust/cms/user/dreyert/CMSSW_8_0_24_patch1/src/UHH2/common/data//MuonTrigger_EfficienciesAndSF_average_RunBtoH.root","IsoMu50_OR_IsoTkMu50_PtEtaBins",1, "muonTrigger"));
@@ -237,9 +237,9 @@ TTEfficiencySelectionModule::TTEfficiencySelectionModule(Context & ctx){
    dphi_selection.reset(new DPhiMuBSelection( CSVBTag(CSVBTag::WP_MEDIUM), 1.2));
                   
   //histograms
-  hists_btag_eff.reset(new BTagMCEfficiencyHists(ctx,"BTagLoose",CSVBTag::WP_LOOSE));
-  hists_btag_medium_eff.reset(new BTagMCEfficiencyHists(ctx,"BTagMedium",CSVBTag::WP_MEDIUM));
-  hists_subjet_btag_eff.reset(new BTagMCEfficiencyHists(ctx,"SubjetBTag",CSVBTag::WP_LOOSE, "topjets") );
+   // hists_btag_eff.reset(new BTagMCEfficiencyHists(ctx,"BTagLoose",CSVBTag::WP_LOOSE));
+   // hists_btag_medium_eff.reset(new BTagMCEfficiencyHists(ctx,"BTagMedium",CSVBTag::WP_MEDIUM));
+   // hists_subjet_btag_eff.reset(new BTagMCEfficiencyHists(ctx,"SubjetBTag",CSVBTag::WP_LOOSE, "topjets") );
 
 
   hists_before_sel.emplace_back(new EventHists(ctx, "Event_presel"));
@@ -368,14 +368,14 @@ bool TTEfficiencySelectionModule::process(Event & event) {
   if(!twoDcut->passes(event)) return false; 
   if(!met_sel->passes(event)) return false; 
   if(!htlep_sel->passes(event)) return false; 
-  hists_btag_eff->fill(event);
-  hists_btag_medium_eff->fill(event);
+  // hists_btag_eff->fill(event);
+  // hists_btag_medium_eff->fill(event);
   if(!bjetCloseToLepton_sel->passes(event)) return false; 
   
   
   //apply b tagging scale factors after the selection
   muo_trigger_SF->process(event);
-  btagwAK8->process(event);
+  //btagwAK8->process(event);
   
   for(auto & h : hists_after_sel){
     h->fill(event);
@@ -472,7 +472,7 @@ bool TTEfficiencySelectionModule::process(Event & event) {
   //fill the histograms
   //===================
   hists_all->fill_probe(event, probe_jet);
-  hists_subjet_btag_eff->fill(event);
+  // hists_subjet_btag_eff->fill(event);
 
   if(probejet_pt > 400) hists_all_400->fill_probe(event, probe_jet);
   if(probejet_pt > 400 && probejet_pt < 550) hists_all_400to550->fill_probe(event, probe_jet);

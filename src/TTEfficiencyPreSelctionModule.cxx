@@ -51,7 +51,7 @@ private:
 
 TTEfficiencyPreSelectionModule::TTEfficiencyPreSelectionModule(Context & ctx){
 
-  MuonId muid = AndId<Muon>(MuonIDTight(), PtEtaCut(55., 2.4));
+  MuonId muid = AndId<Muon>(MuonID(Muon::CutBasedIdTight), PtEtaCut(55., 2.4));
   ElectronId eleid = AndId<Electron>(ElectronID_Spring16_medium_noIso, PtEtaCut(55., 2.4));
 
   common.reset(new CommonModules());
@@ -64,7 +64,8 @@ TTEfficiencyPreSelectionModule::TTEfficiencyPreSelectionModule(Context & ctx){
   common->switch_metcorrection();
 
   common->disable_mcpileupreweight();
-  //common->disable_jersmear();
+  if(isMC) common->disable_metfilters();
+  common->disable_jersmear();
 
   common->init(ctx);
   cout << "common init" <<endl;
@@ -110,6 +111,15 @@ bool TTEfficiencyPreSelectionModule::process(Event & event) {
   //keep uncleaned jets and MET
   std::unique_ptr< std::vector<Jet> >    uncleaned_jets   (new std::vector<Jet>   (*event.jets));
   std::unique_ptr<MET> uncleaned_met(new MET(*event.met));
+   /* 
+  for(const auto & mu : *event.muons){
+     cout << "-----" << endl;
+    cout << (uint64_t(1) << static_cast<uint64_t>(Muon::CutBasedIdTight)) << endl;
+    cout << (uint64_t(1) << static_cast<uint64_t>(Muon::CutBasedIdMedium)) << endl;
+    cout << (uint64_t(1) << static_cast<uint64_t>(Muon::CutBasedIdLoose)) << endl;
+    cout << mu.sel_bits << endl;
+    cout << mu.get_selector(Muon::CutBasedIdTight) << endl;
+  }*/
 
   //run corrections
   bool ok = common->process(event);

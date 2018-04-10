@@ -26,6 +26,8 @@ ProbeJetHists::ProbeJetHists(Context & ctx, const string & dirname): Hists(ctx, 
   book<TH1F>("pt", "Probe jet p_{T} [GeV]", 200, 0., 2000);
   book<TH1F>("eta", "Probe jet #eta", 32, -3.2, 3.2);
 
+  book<TH1F>("pt_subjets", "subjet p_{T} [GeV]", 100,0.,1000.);
+
   book<TH1F>("mass", "Probe jet mass [GeV]", 50, 0, 500);
   book<TH1F>("mass_sub", "Soft drop mass [GeV]", 100, 0, 500);
 
@@ -59,7 +61,7 @@ ProbeJetHists::ProbeJetHists(Context & ctx, const string & dirname): Hists(ctx, 
   book<TH1F>("Wmass", "W mass [GeV]", 50, 0., 150.);
 
   if(fill_PDF){
-    for (unsigned i=0; i < 100; ++i) {
+    for (unsigned i=0; i < 103; ++i) {
       book<TH1F>("mass_sub_PDF_"+std::to_string(i), "Soft drop mass [GeV]", 100, 0, 500);
     }
   }
@@ -132,6 +134,7 @@ void ProbeJetHists::fill(const Event & event){
 
   LorentzVector subjet_sum(0,0,0,0);
   for (const auto s : subjets) {
+    hist("pt_subjets")->Fill(s.pt(), weight);
     subjet_sum += s.v4();
   }
 
@@ -140,8 +143,8 @@ void ProbeJetHists::fill(const Event & event){
 
   //hardcoded because of limited time (SAME VALUES IN PostSelectionModule!! ALWAYS CHANGE BOTH!)
   double softdorpmass = subjet_sum.M();
-  if(mass_scale == "up") softdorpmass *= 1.01;
-  if(mass_scale == "down") softdorpmass *= 0.99;
+  // if(mass_scale == "up") softdorpmass *= 1.01;
+  //if(mass_scale == "down") softdorpmass *= 0.99;
 
   hist("mass_sub")->Fill(softdorpmass, weight);
 
@@ -150,7 +153,7 @@ void ProbeJetHists::fill(const Event & event){
     const auto & sys_weights = event.genInfo->systweights();
     float orig_weight = event.genInfo->originalXWGTUP();
     int MY_FIRST_INDEX = 9;
-    for (unsigned i=0; i < 100; ++i) {
+    for (unsigned i=0; i < 103; ++i) {
       TString name = "mass_sub_PDF_"+std::to_string(i);
       hist(name)->Fill(softdorpmass, weight * sys_weights[i+MY_FIRST_INDEX]/orig_weight);
     }
@@ -235,7 +238,8 @@ void ProbeJetHists::fill(const Event & event){
   double max_CSV = 0.;
 
   std::vector<Jet> *ak4jets = event.jets;
-  JetId btag = CSVBTag(CSVBTag::WP_MEDIUM);
+  //JetId btag = CSVBTag(CSVBTag::WP_MEDIUM);
+  JetId btag = DeepCSVBTag(DeepCSVBTag::WP_MEDIUM);
   double pi = 3.14159265359;
 
   for( const auto & ak4jet : *ak4jets){

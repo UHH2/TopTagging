@@ -87,7 +87,7 @@ PerformanceModule::PerformanceModule(Context & ctx){
   HOTVR_pileupCorrector.reset(new HOTVRPileupCorrectionModule());
 
   add_genjet = ctx.get_handle<std::vector<Particle>>("slimmedGenJetsAK8");
-  topjetJER_smearer.reset(new GenericJetResolutionSmearer(ctx, "topjets", "slimmedGenJetsAK8", false));
+  topjetJER_smearer.reset(new GenericJetResolutionSmearer(ctx, "topjets", "slimmedGenJetsAK8"));
   
   topjet_groomer.reset(new TopJetGroomer()); // just take the subjet sum (make sure that the subjets are corrected properly)
   // topjet_groomer.reset(new TopJetGroomer(false)); // just take the subjet sum (uncorrected!!!!!)
