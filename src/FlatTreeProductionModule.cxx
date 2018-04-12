@@ -193,7 +193,7 @@ bool FlatTreeProductionModule::process(Event &event) {
   bool ok = common->process(event);
   if(!ok) return false;
 
-  topjet_cleaner->process(event);
+  //  topjet_cleaner->process(event);
   
   //apply muon b tagging scale factors 
   muo_tight_noniso_SF->process(event);
