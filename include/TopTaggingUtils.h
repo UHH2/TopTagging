@@ -19,7 +19,7 @@ class TopJetLeptonDeltaRCleaner : public uhh2::AnalysisModule {
 class TopJetCorrectionModules : public uhh2::AnalysisModule {
  public:
 
-  enum jet_type{AK8_PUPPI, AK8_CHS, CA15_PUPPI, CA15_CHS, HOTVR_CHS};
+  enum jet_type{AK8_PUPPI, AK8_CHS, CA15_PUPPI, CA15_CHS, HOTVR_CHS, HOTVR_PUPPI};
 
   explicit TopJetCorrectionModules(uhh2::Context & ctx, jet_type type = AK8_CHS);
   virtual bool process(uhh2::Event & event) override;
@@ -28,7 +28,7 @@ class TopJetCorrectionModules : public uhh2::AnalysisModule {
 
  private:
  bool is_mc;
- std::unique_ptr<TopJetCorrector> topjet_corrector_MC, topjet_corrector_BCD, topjet_corrector_EF, topjet_corrector_FG, topjet_corrector_H;
+ std::unique_ptr<uhh2::AnalysisModule> topjet_corrector_MC, topjet_corrector_BCD, topjet_corrector_EF, topjet_corrector_FG, topjet_corrector_H;
  std::unique_ptr<SubJetCorrector> subjet_corrector_MC, subjet_corrector_BCD, subjet_corrector_EF, subjet_corrector_FG, subjet_corrector_H;
 
  jet_type _type;
@@ -87,6 +87,19 @@ namespace JERFiles {
   extern const std::vector<std::string> Summer16_23Sep2016_V4_G_L23_AK8PFchs_DATA;
   extern const std::vector<std::string> Summer16_23Sep2016_V4_H_L23_AK8PFchs_DATA;
   extern const std::vector<std::string> Summer16_23Sep2016_V4_L23_AK8PFchs_MC;
+
+
+  extern const std::vector<std::string> Summer16_23Sep2016_V4_BCD_L23_AK4PFPuppi_DATA;                                 
+  extern const std::vector<std::string> Summer16_23Sep2016_V4_EF_L23_AK4PFPuppi_DATA;
+  extern const std::vector<std::string> Summer16_23Sep2016_V4_G_L23_AK4PFPuppi_DATA;
+  extern const std::vector<std::string> Summer16_23Sep2016_V4_H_L23_AK4PFPuppi_DATA;
+  extern const std::vector<std::string> Summer16_23Sep2016_V4_L23_AK4PFPuppi_MC;
+
+  extern const std::vector<std::string> Summer16_23Sep2016_V4_BCD_L23_AK8PFPuppi_DATA;                                 
+  extern const std::vector<std::string> Summer16_23Sep2016_V4_EF_L23_AK8PFPuppi_DATA;
+  extern const std::vector<std::string> Summer16_23Sep2016_V4_G_L23_AK8PFPuppi_DATA;
+  extern const std::vector<std::string> Summer16_23Sep2016_V4_H_L23_AK8PFPuppi_DATA;
+  extern const std::vector<std::string> Summer16_23Sep2016_V4_L23_AK8PFPuppi_MC;
 
 
   /*

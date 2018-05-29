@@ -1,5 +1,6 @@
 #include "UHH2/TopTagging/include/TopTaggingUtils.h"
 #include "UHH2/core/include/LorentzVector.h"
+#include "UHH2/HOTVR/include/HOTVRJetCorrector.h"
 
 bool TopJetLeptonDeltaRCleaner::process(uhh2::Event & event) {
 
@@ -90,20 +91,48 @@ TopJetCorrectionModules::TopJetCorrectionModules(uhh2::Context & ctx, jet_type t
     }
   }
 
+  if(_type == HOTVR_PUPPI){
+    if(is_mc){
+      JEC_TOP_MC = JERFiles::Summer16_23Sep2016_V4_L23_AK8PFPuppi_MC;
+      JEC_SUB_MC = JERFiles::Summer16_23Sep2016_V4_L23_AK4PFPuppi_MC;
+    }else{
+      JEC_TOP_BCD = JERFiles::Summer16_23Sep2016_V4_BCD_L23_AK8PFPuppi_DATA;
+      JEC_TOP_EF = JERFiles::Summer16_23Sep2016_V4_EF_L23_AK8PFPuppi_DATA;
+      JEC_TOP_FG = JERFiles::Summer16_23Sep2016_V4_G_L23_AK8PFPuppi_DATA;
+      JEC_TOP_H = JERFiles::Summer16_23Sep2016_V4_H_L23_AK8PFPuppi_DATA;
+     
+      JEC_SUB_BCD = JERFiles::Summer16_23Sep2016_V4_BCD_L23_AK4PFPuppi_DATA;
+      JEC_SUB_EF = JERFiles::Summer16_23Sep2016_V4_EF_L23_AK4PFPuppi_DATA;
+      JEC_SUB_FG = JERFiles::Summer16_23Sep2016_V4_G_L23_AK4PFPuppi_DATA;
+      JEC_SUB_H = JERFiles::Summer16_23Sep2016_V4_H_L23_AK4PFPuppi_DATA;
+    }
+  }
+
   if(is_mc){
-    topjet_corrector_MC.reset(new TopJetCorrector(ctx, JEC_TOP_MC));
-    subjet_corrector_MC.reset(new SubJetCorrector(ctx, JEC_SUB_MC));
+    if(_type == HOTVR_CHS || _type == HOTVR_PUPPI) topjet_corrector_MC.reset(new HOTVRJetCorrector(ctx, JEC_SUB_MC));
+    //if(_type == HOTVR_CHS) topjet_corrector_MC.reset(new HOTVRJetCorrector(ctx, JERFiles::Summer16_23Sep2016_V4_L23_AK4PFchs_MC));
+    else{
+      topjet_corrector_MC.reset(new TopJetCorrector(ctx, JEC_TOP_MC));
+      subjet_corrector_MC.reset(new SubJetCorrector(ctx, JEC_SUB_MC));
+    }
   }
   else{
-    topjet_corrector_BCD.reset(new TopJetCorrector(ctx, JEC_TOP_BCD));
-    topjet_corrector_EF.reset(new TopJetCorrector(ctx, JEC_TOP_EF));
-    topjet_corrector_FG.reset(new TopJetCorrector(ctx, JEC_TOP_FG));
-    topjet_corrector_H.reset(new TopJetCorrector(ctx, JEC_TOP_H));
+    if(_type == HOTVR_CHS || _type == HOTVR_PUPPI){
+      topjet_corrector_BCD.reset(new HOTVRJetCorrector(ctx, JEC_SUB_BCD));
+      topjet_corrector_EF.reset(new HOTVRJetCorrector(ctx, JEC_SUB_EF));
+      topjet_corrector_FG.reset(new HOTVRJetCorrector(ctx, JEC_SUB_FG));
+      topjet_corrector_H.reset(new HOTVRJetCorrector(ctx, JEC_SUB_H));
+    }else{
+      topjet_corrector_BCD.reset(new TopJetCorrector(ctx, JEC_TOP_BCD));
+      topjet_corrector_EF.reset(new TopJetCorrector(ctx, JEC_TOP_EF));
+      topjet_corrector_FG.reset(new TopJetCorrector(ctx, JEC_TOP_FG));
+      topjet_corrector_H.reset(new TopJetCorrector(ctx, JEC_TOP_H));
 
-    subjet_corrector_BCD.reset(new SubJetCorrector(ctx, JEC_SUB_BCD));
-    subjet_corrector_EF.reset(new SubJetCorrector(ctx, JEC_SUB_EF));
-    subjet_corrector_FG.reset(new SubJetCorrector(ctx, JEC_SUB_FG));
-    subjet_corrector_H.reset(new SubJetCorrector(ctx, JEC_SUB_H));
+      subjet_corrector_BCD.reset(new SubJetCorrector(ctx, JEC_SUB_BCD));
+      subjet_corrector_EF.reset(new SubJetCorrector(ctx, JEC_SUB_EF));
+      subjet_corrector_FG.reset(new SubJetCorrector(ctx, JEC_SUB_FG));
+      subjet_corrector_H.reset(new SubJetCorrector(ctx, JEC_SUB_H));
+    }
   }
 }
 
@@ -112,25 +141,28 @@ bool TopJetCorrectionModules::process(uhh2::Event & event) {
 
   assert(event.topjets);
 
+  bool subjet_correction = true;
+  if(_type == HOTVR_CHS || _type == HOTVR_PUPPI) subjet_correction = false;
+
   if(is_mc){
     topjet_corrector_MC->process(event);
-    subjet_corrector_MC->process(event);
+    if(subjet_correction) subjet_corrector_MC->process(event);
   }else{
     if(event.run <= runnr_BCD) {
       topjet_corrector_BCD->process(event);
-      subjet_corrector_BCD->process(event);
+      if(subjet_correction) subjet_corrector_BCD->process(event);
     }         
     else if(event.run < runnr_EFearly) {
       topjet_corrector_EF->process(event);
-      subjet_corrector_EF->process(event);
+      if(subjet_correction) subjet_corrector_EF->process(event);
     } 
     else if(event.run <= runnr_FlateG) {
       topjet_corrector_FG->process(event);
-      subjet_corrector_FG->process(event);
+      if(subjet_correction) subjet_corrector_FG->process(event);
     } 
     else if(event.run > runnr_FlateG) {
       topjet_corrector_H->process(event);
-      subjet_corrector_H->process(event);
+      if(subjet_correction) subjet_corrector_H->process(event);
     }
   }
   return true;
@@ -338,4 +370,64 @@ const std::vector<std::string> JERFiles::Summer16_23Sep2016_V4_H_L23_AK8PFchs_DA
 const std::vector<std::string> JERFiles::Summer16_23Sep2016_V4_L23_AK8PFchs_MC = {
   "JECDatabase/textFiles/Summer16_23Sep2016V4_MC/Summer16_23Sep2016V4_MC_L2Relative_AK8PFchs.txt",
   "JECDatabase/textFiles/Summer16_23Sep2016V4_MC/Summer16_23Sep2016V4_MC_L3Absolute_AK8PFchs.txt",
+};
+
+
+const std::vector<std::string> JERFiles::Summer16_23Sep2016_V4_BCD_L23_AK4PFPuppi_DATA = {
+  "JECDatabase/textFiles/Summer16_23Sep2016BCDV4_DATA/Summer16_23Sep2016BCDV4_DATA_L2Relative_AK4PFPuppi.txt",
+  "JECDatabase/textFiles/Summer16_23Sep2016BCDV4_DATA/Summer16_23Sep2016BCDV4_DATA_L3Absolute_AK4PFPuppi.txt",
+  "JECDatabase/textFiles/Summer16_23Sep2016BCDV4_DATA/Summer16_23Sep2016BCDV4_DATA_L2L3Residual_AK4PFPuppi.txt",
+};
+
+const std::vector<std::string> JERFiles::Summer16_23Sep2016_V4_EF_L23_AK4PFPuppi_DATA = {
+  "JECDatabase/textFiles/Summer16_23Sep2016EFV4_DATA/Summer16_23Sep2016EFV4_DATA_L2Relative_AK4PFPuppi.txt",
+  "JECDatabase/textFiles/Summer16_23Sep2016EFV4_DATA/Summer16_23Sep2016EFV4_DATA_L3Absolute_AK4PFPuppi.txt",
+  "JECDatabase/textFiles/Summer16_23Sep2016EFV4_DATA/Summer16_23Sep2016EFV4_DATA_L2L3Residual_AK4PFPuppi.txt",
+};
+
+const std::vector<std::string> JERFiles::Summer16_23Sep2016_V4_G_L23_AK4PFPuppi_DATA = {
+  "JECDatabase/textFiles/Summer16_23Sep2016GV4_DATA/Summer16_23Sep2016GV4_DATA_L2Relative_AK4PFPuppi.txt",
+  "JECDatabase/textFiles/Summer16_23Sep2016GV4_DATA/Summer16_23Sep2016GV4_DATA_L3Absolute_AK4PFPuppi.txt",
+  "JECDatabase/textFiles/Summer16_23Sep2016GV4_DATA/Summer16_23Sep2016GV4_DATA_L2L3Residual_AK4PFPuppi.txt",
+};
+
+const std::vector<std::string> JERFiles::Summer16_23Sep2016_V4_H_L23_AK4PFPuppi_DATA = {
+  "JECDatabase/textFiles/Summer16_23Sep2016HV4_DATA/Summer16_23Sep2016HV4_DATA_L2Relative_AK4PFPuppi.txt",
+  "JECDatabase/textFiles/Summer16_23Sep2016HV4_DATA/Summer16_23Sep2016HV4_DATA_L3Absolute_AK4PFPuppi.txt",
+  "JECDatabase/textFiles/Summer16_23Sep2016HV4_DATA/Summer16_23Sep2016HV4_DATA_L2L3Residual_AK4PFPuppi.txt",
+};
+
+const std::vector<std::string> JERFiles::Summer16_23Sep2016_V4_L23_AK4PFPuppi_MC = {
+  "JECDatabase/textFiles/Summer16_23Sep2016V4_MC/Summer16_23Sep2016V4_MC_L2Relative_AK4PFPuppi.txt",
+  "JECDatabase/textFiles/Summer16_23Sep2016V4_MC/Summer16_23Sep2016V4_MC_L3Absolute_AK4PFPuppi.txt",
+};
+
+
+const std::vector<std::string> JERFiles::Summer16_23Sep2016_V4_BCD_L23_AK8PFPuppi_DATA = {
+  "JECDatabase/textFiles/Summer16_23Sep2016BCDV4_DATA/Summer16_23Sep2016BCDV4_DATA_L2Relative_AK8PFPuppi.txt",
+  "JECDatabase/textFiles/Summer16_23Sep2016BCDV4_DATA/Summer16_23Sep2016BCDV4_DATA_L3Absolute_AK8PFPuppi.txt",
+  "JECDatabase/textFiles/Summer16_23Sep2016BCDV4_DATA/Summer16_23Sep2016BCDV4_DATA_L2L3Residual_AK8PFPuppi.txt",
+};
+
+const std::vector<std::string> JERFiles::Summer16_23Sep2016_V4_EF_L23_AK8PFPuppi_DATA = {
+  "JECDatabase/textFiles/Summer16_23Sep2016EFV4_DATA/Summer16_23Sep2016EFV4_DATA_L2Relative_AK8PFPuppi.txt",
+  "JECDatabase/textFiles/Summer16_23Sep2016EFV4_DATA/Summer16_23Sep2016EFV4_DATA_L3Absolute_AK8PFPuppi.txt",
+  "JECDatabase/textFiles/Summer16_23Sep2016EFV4_DATA/Summer16_23Sep2016EFV4_DATA_L2L3Residual_AK8PFPuppi.txt",
+};
+
+const std::vector<std::string> JERFiles::Summer16_23Sep2016_V4_G_L23_AK8PFPuppi_DATA = {
+  "JECDatabase/textFiles/Summer16_23Sep2016GV4_DATA/Summer16_23Sep2016GV4_DATA_L2Relative_AK8PFPuppi.txt",
+  "JECDatabase/textFiles/Summer16_23Sep2016GV4_DATA/Summer16_23Sep2016GV4_DATA_L3Absolute_AK8PFPuppi.txt",
+  "JECDatabase/textFiles/Summer16_23Sep2016GV4_DATA/Summer16_23Sep2016GV4_DATA_L2L3Residual_AK8PFPuppi.txt",
+};
+
+const std::vector<std::string> JERFiles::Summer16_23Sep2016_V4_H_L23_AK8PFPuppi_DATA = {
+  "JECDatabase/textFiles/Summer16_23Sep2016HV4_DATA/Summer16_23Sep2016HV4_DATA_L2Relative_AK8PFPuppi.txt",
+  "JECDatabase/textFiles/Summer16_23Sep2016HV4_DATA/Summer16_23Sep2016HV4_DATA_L3Absolute_AK8PFPuppi.txt",
+  "JECDatabase/textFiles/Summer16_23Sep2016HV4_DATA/Summer16_23Sep2016HV4_DATA_L2L3Residual_AK8PFPuppi.txt",
+};
+
+const std::vector<std::string> JERFiles::Summer16_23Sep2016_V4_L23_AK8PFPuppi_MC = {
+  "JECDatabase/textFiles/Summer16_23Sep2016V4_MC/Summer16_23Sep2016V4_MC_L2Relative_AK8PFPuppi.txt",
+  "JECDatabase/textFiles/Summer16_23Sep2016V4_MC/Summer16_23Sep2016V4_MC_L3Absolute_AK8PFPuppi.txt",
 };
