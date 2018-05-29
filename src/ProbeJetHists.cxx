@@ -30,22 +30,29 @@ ProbeJetHists::ProbeJetHists(Context & ctx, const string & dirname): Hists(ctx, 
   book<TH1F>("mass_sub", "Soft drop mass [GeV]", 100, 0, 500);
 
   book<TH1F>("mass_SD", "Probe jet soft drop mass raw [GeV]", 50, 0, 500);
-  book<TH1F>("mass_SD_Corr", "Probe jet soft drop mass corrected [GeV]", 40, 0, 300);
-  book<TH1F>("mass_pruned", "Probe jet pruned mass [GeV]", 50, 0, 500);
+  // book<TH1F>("mass_SD_Corr", "Probe jet soft drop mass corrected [GeV]", 40, 0, 300);
+  // book<TH1F>("mass_pruned", "Probe jet pruned mass [GeV]", 50, 0, 500);
 
   book<TH1F>("tau32", "Probe jet #tau3/#tau2", 40, 0, 1);
   book<TH1F>("tau21", "Probe jet #tau2/#tau1", 40, 0, 1);
   book<TH1F>("tau2", "Probe jet #tau2", 40, 0, 1);
   book<TH1F>("tau3", "Probe jet #tau3", 40, 0, 1);
 
-  book<TH1F>("HTTmass", "Probe jet HTT mass [GeV]", 40, 0, 300);
-  book<TH1F>("HTTmass_corr", "Probe jet HTT mass corrrected [GeV]", 40, 0, 300);
+  book<TH1F>("tau32_groomed", "Probe jet #tau3/#tau2 groomed", 40, 0, 1);
+  book<TH1F>("tau21_groomed", "Probe jet #tau2/#tau1 groomed", 40, 0, 1);
+  book<TH1F>("tau2_groomed", "Probe jet #tau2 groomed", 40, 0, 1);
+  book<TH1F>("tau3_groomed", "Probe jet #tau3 groomed", 40, 0, 1);
 
-  book<TH1F>("fRec", "Probe jet fRec", 40, 0, 1);
+  // book<TH1F>("HTTmass", "Probe jet HTT mass [GeV]", 40, 0, 300);
+  // book<TH1F>("HTTmass_corr", "Probe jet HTT mass corrrected [GeV]", 40, 0, 300);
+
+  // book<TH1F>("fRec", "Probe jet fRec", 40, 0, 1);
+  book<TH1F>("fpt", "leading subjet p_{T}/probe jet p_{T}", 40, 0, 1);
 
   book<TH1F>("m12", "m12", 20, 0., 100.);
   book<TH1F>("m13", "m13", 20, 0., 100.);
   book<TH1F>("m23", "m23", 20, 0., 100.);
+  book<TH1F>("mmin", "mmin", 20, 0., 100.);
 
   book<TH1F>("Nsub", "Number of subjets", 6, -0.5, 5.5);  
 
@@ -63,7 +70,7 @@ ProbeJetHists::ProbeJetHists(Context & ctx, const string & dirname): Hists(ctx, 
       book<TH1F>("mass_sub_PDF_"+std::to_string(i), "Soft drop mass [GeV]", 100, 0, 500);
     }
   }
-    
+  /*    
   //additional variables
 
   //bjet close to muon
@@ -87,6 +94,8 @@ ProbeJetHists::ProbeJetHists(Context & ctx, const string & dirname): Hists(ctx, 
   //scatter plots
   h_ratio_mLB_vs_mB = book<TH2D>("ratio_mLB_vs_mB", ";m_{probe jet}/m_{b-jet+#mu};m_{probe jet}/m_{b-jet}",  100, 0., 10., 1000, 0., 100.);
   h_tau32_vs_pt = book<TH2D>("tau32_vs_pt", ";p_{T} [GeV];#tau_{3}/#tau_{2}",200, 0., 2000,  40, 0, 1);
+  */
+
 }
 
 void ProbeJetHists::fill(const Event & event){
@@ -114,7 +123,7 @@ void ProbeJetHists::fill(const Event & event){
   double m13 = 0; 
   double m23 = 0;
 
-  if(subjets.size() == 3) {
+  if(subjets.size() > 2) {
     if( (subjets.at(0).v4() + subjets.at(1).v4()).isTimelike() ) {
       m12 = (subjets.at(0).v4() + subjets.at(1).v4()).M();
     }
@@ -128,6 +137,7 @@ void ProbeJetHists::fill(const Event & event){
     hist("m12")->Fill(m12, weight);
     hist("m13")->Fill(m13, weight);
     hist("m23")->Fill(m23, weight);
+    hist("mmin")->Fill(min(min(m12,m13),m23), weight);
   }
 
   LorentzVector subjet_sum(0,0,0,0);
@@ -140,8 +150,8 @@ void ProbeJetHists::fill(const Event & event){
 
   //hardcoded because of limited time (SAME VALUES IN PostSelectionModule!! ALWAYS CHANGE BOTH!)
   double softdorpmass = subjet_sum.M();
-  if(mass_scale == "up") softdorpmass *= 1.01;
-  if(mass_scale == "down") softdorpmass *= 0.99;
+  // if(mass_scale == "up") softdorpmass *= 1.01;
+  //if(mass_scale == "down") softdorpmass *= 0.99;
 
   hist("mass_sub")->Fill(softdorpmass, weight);
 
@@ -158,19 +168,24 @@ void ProbeJetHists::fill(const Event & event){
 
     // else  hist("mass_sub")->Fill(-1, weight);
   hist("mass_SD")->Fill(jet.softdropmass(), weight);
-  hist("mass_SD_Corr")->Fill(subjet_sum.M()/jet.JEC_factor_raw(), weight);
-  hist("mass_pruned")->Fill(jet.prunedmass(), weight);
+  // hist("mass_SD_Corr")->Fill(subjet_sum.M()/jet.JEC_factor_raw(), weight);
+  //hist("mass_pruned")->Fill(jet.prunedmass(), weight);
 
-  if (jet.has_tag(jet.tagname2tag("fRec"))) hist("fRec")->Fill(jet.get_tag(jet.tagname2tag("fRec")), weight);
-  if (jet.has_tag(jet.tagname2tag("mass"))) hist("HTTmass")->Fill(jet.get_tag(jet.tagname2tag("mass")), weight);
-  if (jet.has_tag(jet.tagname2tag("mass"))) hist("HTTmass_corr")->Fill(jet.get_tag(jet.tagname2tag("mass"))/jet.JEC_factor_raw(), weight);
+  //if (jet.has_tag(jet.tagname2tag("fRec"))) hist("fRec")->Fill(jet.get_tag(jet.tagname2tag("fRec")), weight);
+  //if (jet.has_tag(jet.tagname2tag("mass"))) hist("HTTmass")->Fill(jet.get_tag(jet.tagname2tag("mass")), weight);
+  //if (jet.has_tag(jet.tagname2tag("mass"))) hist("HTTmass_corr")->Fill(jet.get_tag(jet.tagname2tag("mass"))/jet.JEC_factor_raw(), weight);
 
   hist("tau32")->Fill(jet.tau3()/jet.tau2(), weight);
   hist("tau21")->Fill(jet.tau2()/jet.tau1(), weight);
   hist("tau3")->Fill(jet.tau3(), weight);
   hist("tau2")->Fill(jet.tau2(), weight);
 
+  hist("tau32_groomed")->Fill(jet.tau3_groomed()/jet.tau2_groomed(), weight);
+  hist("tau21_groomed")->Fill(jet.tau2_groomed()/jet.tau1_groomed(), weight);
+  hist("tau3_groomed")->Fill(jet.tau3_groomed(), weight);
+  hist("tau2_groomed")->Fill(jet.tau2_groomed(), weight);
 
+  hist("fpt")->Fill(subjets.at(0).pt()/jet.pt(), weight);
 
   hist("CSV_topjet")->Fill(jet.btag_combinedSecondaryVertex(), weight);
 
@@ -194,11 +209,11 @@ void ProbeJetHists::fill(const Event & event){
   hist("subjetPT")->Fill(pt_highestCSV, weight);
 
   
-  hist("mSubMax")->Fill(highestSubjetMass, weight);
-  hist("mSub_ratio")->Fill(highestSubjetMass/lowestSubjetMass, weight);
-  hist("rel_mSub_ratio")->Fill(highestSubjetMass/subjet_sum.M(), weight);
-  if(subjets.size()>1) hist("ptSub_ratio")->Fill(subjets.at(0).pt()/subjets.at(1).pt(), weight);
-  if(subjets.size()>1) hist("rel_ptSub_ratio")->Fill(subjets.at(0).pt()/subjet_sum.Pt(), weight);
+  // hist("mSubMax")->Fill(highestSubjetMass, weight);
+  //  hist("mSub_ratio")->Fill(highestSubjetMass/lowestSubjetMass, weight);
+  // hist("rel_mSub_ratio")->Fill(highestSubjetMass/subjet_sum.M(), weight);
+  // if(subjets.size()>1) hist("ptSub_ratio")->Fill(subjets.at(0).pt()/subjets.at(1).pt(), weight);
+  // if(subjets.size()>1) hist("rel_ptSub_ratio")->Fill(subjets.at(0).pt()/subjet_sum.Pt(), weight);
 
   JetId checkbtag=CSVBTag(CSVBTag::WP_LOOSE);
   LorentzVector v4_W(0,0,0,0);
@@ -211,11 +226,13 @@ void ProbeJetHists::fill(const Event & event){
     if(N_btags >= 1) hist("Wmass")->Fill(v4_W.M(), weight);
   }
 
-  h_tau32_vs_pt->Fill(jet.pt(),jet.tau3()/jet.tau2(),weight);
-
+ 
+  /*
   //======================
   //additoinal hists 
   //======================
+
+  h_tau32_vs_pt->Fill(jet.pt(),jet.tau3()/jet.tau2(),weight);
 
   //get the muon
   Muon mu = event.muons->at(0);
@@ -325,6 +342,7 @@ void ProbeJetHists::fill(const Event & event){
     double mProbe_mbjet = jet.v4().M()/bjet.v4().M();
     h_ratio_mLB_vs_mB->Fill(mProbe_mLep_bjet, mProbe_mbjet, weight);
   }
+  */
 }
 
 
