@@ -149,41 +149,103 @@ bool MergedSelection::passes_probe(const uhh2::Event &event, const TopJet &probe
   // const TTbarGen& ttbarGen = !ttbarGen_name.empty() ? event.get(h_ttbarGen) : TTbarGen(*event.genparticles,true);
   const auto & ttbarGen = event.get(h_ttbarGen);
 
+  double r = 0.; 
+  /* if (radius < 0){
+    double Rmin = 0.1;
+    double Rmax = 1.5;
+    double rho = 600.;
+    double reff = probe_jet.pt()/rho;
+
+    if( reff <  Rmin ) r = Rmin;
+    else if( reff >  Rmax ) r = Rmax;
+    else r = reff;
+    //   r = sqrt(probe_jet.jetArea()/3.14159265359); //needed for HOTVR (no fixed radius)
+    }*/
+  //else 
+  r = radius;
   
-  if(ttbarGen.IsSemiLeptonicDecay()) {
-    GenParticle bHad = ttbarGen.BHad();
-    GenParticle q1 = ttbarGen.Q1();
-    GenParticle q2 = ttbarGen.Q2();
-    if(opt == oFullyMerged){
-      if( deltaR(probe_jet.v4(), bHad.v4()) < radius
-	  && deltaR(probe_jet.v4(), q1.v4()) < radius
-	  && deltaR(probe_jet.v4(), q2.v4()) < radius) {
-	return true;
+
+  if(radius < 0){
+    
+    //new subjet matching for HOTVR jets
+
+    if(ttbarGen.IsSemiLeptonicDecay()) {
+      
+      bool q1_matched = false;
+      bool q2_matched = false;
+      bool b_matched = false;
+
+      GenParticle bHad = ttbarGen.BHad();
+      GenParticle q1 = ttbarGen.Q1();
+      GenParticle q2 = ttbarGen.Q2();
+
+      for(const auto & subjet: probe_jet.subjets()){
+	
+	double ri = r = sqrt(subjet.jetArea()/3.14159265359);
+	
+	if(deltaR(subjet.v4(), q1) < ri) q1_matched = true;
+	if(deltaR(subjet.v4(), q2) < ri) q2_matched = true;
+	if(deltaR(subjet.v4(), bHad) < ri) b_matched = true;
+      }
+
+      int Nmatched = 0;
+      if(q1_matched) Nmatched++;
+      if(q2_matched) Nmatched++;
+      if(b_matched) Nmatched++;
+
+      if(opt == oFullyMerged && Nmatched == 3) return true;
+      if(opt == oSemiMerged && Nmatched == 2) return true;
+      if(opt == oNotMerged && Nmatched < 2) return true;
+
+      if(opt == oLight && Nmatched < 2) return true;
+
+      if(opt == oMergedW && Nmatched == 2 && b_matched) return true;
+      if(opt == oBplusQ && Nmatched == 2 && !b_matched) return true;
+      
+    }
+    else if(opt == oBkg || opt == oNotMerged) {
+      return true;
+    }    
+    
+  }else{
+
+    //old matching
+
+    if(ttbarGen.IsSemiLeptonicDecay()) {
+      GenParticle bHad = ttbarGen.BHad();
+      GenParticle q1 = ttbarGen.Q1();
+      GenParticle q2 = ttbarGen.Q2();
+      if(opt == oFullyMerged){
+	if( deltaR(probe_jet.v4(), bHad.v4()) < r
+	    && deltaR(probe_jet.v4(), q1.v4()) < r
+	    && deltaR(probe_jet.v4(), q2.v4()) < r) {
+	  return true;
+	}
+      }
+      if(opt == oMergedW || opt == oSemiMerged) {
+	if( deltaR(probe_jet.v4(), bHad.v4()) > r
+	    && deltaR(probe_jet.v4(), q1.v4()) < r
+	    && deltaR(probe_jet.v4(), q2.v4()) < r) {
+	  return true;
+	}
+      }
+      if(opt == oBplusQ || opt == oSemiMerged) {
+	if( deltaR(probe_jet.v4(), bHad.v4()) < r){
+	  if (deltaR(probe_jet.v4(), q1.v4()) < r && deltaR(probe_jet.v4(), q2.v4()) > r) return true;
+	  if (deltaR(probe_jet.v4(), q1.v4()) > r && deltaR(probe_jet.v4(), q2.v4()) < r) return true;	
+	}
+      }
+      if(opt == oLight|| opt == oNotMerged) {
+	unsigned int N = 0;
+	if( deltaR(probe_jet.v4(), bHad.v4()) < r ) N++;
+	if( deltaR(probe_jet.v4(), q1.v4()) < r) N++;
+	if( deltaR(probe_jet.v4(), q2.v4()) < r) N++;
+	if( N <= 1) return true;
       }
     }
-    if(opt == oMergedW || opt == oSemiMerged) {
-      if( deltaR(probe_jet.v4(), bHad.v4()) > radius
-	  && deltaR(probe_jet.v4(), q1.v4()) < radius
-	  && deltaR(probe_jet.v4(), q2.v4()) < radius) {
-	return true;
-      }
+    else if(opt == oBkg || opt == oNotMerged) {
+      return true;
     }
-    if(opt == oBplusQ || opt == oSemiMerged) {
-      if( deltaR(probe_jet.v4(), bHad.v4()) < radius){
-	if (deltaR(probe_jet.v4(), q1.v4()) < radius && deltaR(probe_jet.v4(), q2.v4()) > radius) return true;
-	if (deltaR(probe_jet.v4(), q1.v4()) > radius && deltaR(probe_jet.v4(), q2.v4()) < radius) return true;	
-      }
-    }
-    if(opt == oLight|| opt == oNotMerged) {
-      unsigned int N = 0;
-      if( deltaR(probe_jet.v4(), bHad.v4()) < radius ) N++;
-      if( deltaR(probe_jet.v4(), q1.v4()) < radius) N++;
-      if( deltaR(probe_jet.v4(), q2.v4()) < radius) N++;
-      if( N <= 1) return true;
-    }
-  }
-  else if(opt == oBkg || opt == oNotMerged) {
-    return true;
   }
   return false;
 }

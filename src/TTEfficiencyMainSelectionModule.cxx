@@ -24,7 +24,7 @@
 #include "UHH2/TopTagging/include/ProbeJetHists.h"
 #include <UHH2/common/include/Utils.h>
 #include "UHH2/TopTagging/include/TopTaggingUtils.h"
-
+#include "UHH2/HOTVR/include/HOTVRJetCorrector.h"
 
 using namespace std;
 using namespace uhh2;
@@ -40,7 +40,7 @@ private:
     
   //correctors
   std::unique_ptr<CommonModules> common;
-  std::unique_ptr<TopJetCorrectionModules> topjet_corr;
+  std::unique_ptr<uhh2::AnalysisModule> topjet_corr;
   std::unique_ptr<GenericJetResolutionSmearer> topjetJER_smearer;
   std::unique_ptr<TopJetGroomer> topjet_groomer;
   std::unique_ptr<uhh2::AnalysisModule> pileupRW;
@@ -79,7 +79,7 @@ private:
 
   std::vector<std::unique_ptr<ProbeJetHists>> h_tau32, h_tau32_mass, h_tau32_btag, h_tau32_mass_btag, h_tau32_mass_btag_pt400to550, h_tau32_mass_btag_pt550, h_tau32_mass_btag_pt400;
 
-  bool useHTT, usePUPPI;
+  bool useHTT, usePUPPI, useHOTVR;
   bool subjet_correction;
   string version;
 
@@ -107,10 +107,13 @@ TTEfficiencyMainSelectionModule::TTEfficiencyMainSelectionModule(Context & ctx){
   useHTT = (ctx.get("useHTT", "<not set>") == "TRUE");
   usePUPPI = (ctx.get("usePUPPI", "<not set>") == "TRUE");
 
+  useHOTVR = (ctx.get("useHOTVR", "<not set>") == "TRUE");
+
   if(usePUPPI) cout << "use PUPPI topjets" << endl;
   else cout << "use CHS topjets" << endl;
 
   if(useHTT) cout << "run the HTT" << endl;
+  else if(useHOTVR) cout << "run HOTVR" << endl;
   else cout << "run CMS tagger" << endl;
 
   version = ctx.get("dataset_version", "");
@@ -123,7 +126,7 @@ TTEfficiencyMainSelectionModule::TTEfficiencyMainSelectionModule(Context & ctx){
     subjet_correction = true; 
     cout << "use AK4 correction on subjets to get the groomed topjet." << endl;
   }
-
+  if(useHOTVR) subjet_correction = false;
 
   //=============================
   // IDs
@@ -162,13 +165,20 @@ TTEfficiencyMainSelectionModule::TTEfficiencyMainSelectionModule(Context & ctx){
   common->set_HTjetid(jetid);
   common->init(ctx, PU_variation);
   cout << "common init" <<endl;
- 
-  if(usePUPPI) topjet_corr.reset(new TopJetCorrectionModules(ctx, TopJetCorrectionModules::AK8_PUPPI));
-  else topjet_corr.reset(new TopJetCorrectionModules(ctx, TopJetCorrectionModules::AK8_CHS));
+	      
+  if(!useHOTVR){
+    if(usePUPPI) topjet_corr.reset(new TopJetCorrectionModules(ctx, TopJetCorrectionModules::AK8_PUPPI));
+    else topjet_corr.reset(new TopJetCorrectionModules(ctx, TopJetCorrectionModules::AK8_CHS));
+  }else{
+    topjet_corr.reset(new TopJetCorrectionModules(ctx, TopJetCorrectionModules::HOTVR_CHS));
+  }
 
   if(isMC) {
-    add_genjet = ctx.get_handle<std::vector<Particle>>("slimmedGenJetsAK8");
-    topjetJER_smearer.reset(new GenericJetResolutionSmearer(ctx, "topjets", "slimmedGenJetsAK8", false));
+    if(useHOTVR) topjetJER_smearer.reset(new GenericJetResolutionSmearer(ctx, "topjets", "gentopjets", false));
+    else{
+      add_genjet = ctx.get_handle<std::vector<Particle>>("slimmedGenJetsAK8");
+      topjetJER_smearer.reset(new GenericJetResolutionSmearer(ctx, "topjets", "slimmedGenJetsAK8", false));
+    }
   }
   if(subjet_correction) topjet_groomer.reset(new TopJetGroomer()); // just take the subjet sum (make sure that the subjets are corrected properly)
   else topjet_groomer.reset(new TopJetGroomer(false)); //undo the subjet JEC corrections in case you want to correct the resulting subjet sum
@@ -179,7 +189,7 @@ TTEfficiencyMainSelectionModule::TTEfficiencyMainSelectionModule(Context & ctx){
   //=============================
 
   jet_cleaner.reset(new JetCleaner(ctx, 30., 2.4));
-  if (useHTT) topjet_cleaner_dRlep.reset(new TopJetLeptonDeltaRCleaner(1.5));
+  if (useHTT || useHOTVR) topjet_cleaner_dRlep.reset(new TopJetLeptonDeltaRCleaner(1.5));
   else topjet_cleaner_dRlep.reset(new TopJetLeptonDeltaRCleaner(0.8));
 
   if(useHTT) topjet_cleaner.reset(new TopJetCleaner(ctx, TopJetId(PtEtaCut(150., 2.4))));
@@ -275,8 +285,8 @@ TTEfficiencyMainSelectionModule::TTEfficiencyMainSelectionModule(Context & ctx){
 
 bool TTEfficiencyMainSelectionModule::process(Event & event) {
    
-   if(version == "TTbar_Incl" && event.run == 1 && event.event == 67315776) return false;
-  //  if(version == "TTbar_1000toInf" && event.run == 1 && event.event == 185748260) return false;
+  if(version == "TTbar_Incl" && event.run == 1 && event.event == 67315776) return false;
+  if(version == "TTbar_1000toInf" && event.run == 1 && event.event == 185748260) return false;
   
  //=============================         
   //apply top pt reweighting
@@ -301,7 +311,7 @@ bool TTEfficiencyMainSelectionModule::process(Event & event) {
     topjet_groomer->process(event); //now get the subjet sum from corrected subjets
   }else{
     //    topjet_groomer->process(event); //get the subjet sum from uncorrected subjets (sets the JEC_Raw for the topjet to 1)
-    topjet_corr->process(event); //apply AK8 corrections on the full jet and AK4 corrections on the subjets
+    topjet_corr->process(event); //apply AK8 corrections on the full jet and AK4 corrections on the subjets OR apply HOTVR corrections
     if(isMC) topjetJER_smearer->process(event);
   } 
 
