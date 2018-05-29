@@ -7,7 +7,7 @@
 <!ENTITY MC_Zprime_highPt SYSTEM "/nfs/dust/cms/user/dreyert/CMSSW_8_0_24_patch1/src/UHH2/common/datasets/RunII_80X_v3/Zprime/MC_ZprimeToTT_01w_M3000.xml">
 <!ENTITY MC_Zprime_lowPt SYSTEM "/nfs/dust/cms/user/dreyert/CMSSW_8_0_24_patch1/src/UHH2/common/datasets/RunII_80X_v3/Zprime/MC_ZprimeToTT_01w_M1000.xml">
 <!ENTITY InDir "/nfs/dust/cms/user/dreyert/RunII_80X_Moriond17/NewMainSelection/AK8PUPPI/">
-<!ENTITY OutDir "/nfs/dust/cms/user/dreyert/RunII_80X_Moriond17/PostSelection/AK8PUPPI/new_data/Performance/CHS/">
+<!ENTITY OutDir "/nfs/dust/cms/user/dreyert/RunII_80X_Moriond17/PostSelection/AK8PUPPI/new_data/Performance/CHSNoJetFlavor_PT/">
 
 ]>
 
@@ -108,6 +108,7 @@
             <Item Name="usePUPPI" Value="FAlSE" />
 	    <Item Name="TopJetCorrectionMode" Value="TOP" />
 	    <Item Name="MergedSelection" Value="all" />
+	    <Item Name="useJetFlavor" Value="FALSE" />
 <!--		   <Item Name="MergedSelection" Value="bkg" />
 	    <Item Name="MergedSelection" Value="mergedW" />
 	    <Item Name="MergedSelection" Value="mergedQB" />
