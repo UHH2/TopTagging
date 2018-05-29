@@ -27,8 +27,9 @@ private:
   vector<GenParticle> GetMergedHadronicTops(TTbarGen ttbarGen, double ptMin, double ptMax, double etaMax, double radius);
   vector<GenParticle> GetQuarksAndGluons(vector<GenParticle> genpaticles, double ptMin, double ptMax, double etaMax);
   bool FillTree(const Event & event, GenParticle part, int Npart);
-  bool SetCMSTTv2Variables(const TopJet jet);
-  bool SetHOTVRVariables(const TopJet jet);
+  bool SetCMSTTv2Variables(const TopJet jet, bool matched);
+  bool SetHOTVRVariables(const TopJet jet, bool matched);
+  bool SetHTTVariables(const TopJet jet, bool matched);
 
   //correctors (JECs)
   std::unique_ptr<TopJetCorrectionModules> topjet_corr;
@@ -49,7 +50,7 @@ private:
   TTree* _flatTree;
  
   //output variables
-  int i_evt, i_parton, NPV, type;
+  int i_evt, i_parton, NPV, type, matched, gen_pdgId;
   double gen_pt, gen_eta, gen_phi;
 
   //CMSTopTaggerV2 vriables
@@ -59,10 +60,12 @@ private:
   int clf_Nsubjets;
   double clf_jetmass, clf_fpt, clf_mpair, clf_tau32_groomed;
 
+  //HTT variables
+  double clf_mass, clf_mass_raw, clf_mass_tag, clf_fRec, clf_fRec_raw, clf_fRec_tag;
+
   TString version;
   TString fileName;
-  bool usePUPPI;
-  bool useHOTVR;
+  bool usePUPPI, useHOTVR, useHTT;
   bool useJetFlavor;
  
 };
@@ -72,22 +75,29 @@ PerformanceModule::PerformanceModule(Context & ctx){
   //get configuration values
   version = (TString)ctx.get("dataset_version", "");
   TString path = (TString)ctx.get("OutputPath", "");
-  fileName = path+"PerformanceTree_"+version+".root";
+  TString postFix = (TString)ctx.get("PFix", "");
+  cout << "postfix:  " << postFix << endl;
+  fileName = path+"PerformanceTree_"+version+postFix+".root";
 
   usePUPPI = (ctx.get("usePUPPI", "<not set>") == "TRUE");
   useHOTVR = (ctx.get("useHOTVR", "<not set>") == "TRUE");
+  useHTT = (ctx.get("useHTT", "<not set>") == "TRUE");
 
   useJetFlavor = (ctx.get("useJetFlavor", "<not set>") == "TRUE");
 
   //JEC and JER settings 
-  if(usePUPPI) topjet_corr.reset(new TopJetCorrectionModules(ctx, TopJetCorrectionModules::AK8_PUPPI));
-  else if(useHOTVR && !usePUPPI) topjet_corr.reset(new TopJetCorrectionModules(ctx, TopJetCorrectionModules::HOTVR_CHS));
+ 
+  if(useHOTVR && !usePUPPI) topjet_corr.reset(new TopJetCorrectionModules(ctx, TopJetCorrectionModules::HOTVR_CHS));
+  else if(useHOTVR && usePUPPI) topjet_corr.reset(new TopJetCorrectionModules(ctx, TopJetCorrectionModules::HOTVR_PUPPI));
+  else if(usePUPPI) topjet_corr.reset(new TopJetCorrectionModules(ctx, TopJetCorrectionModules::AK8_PUPPI));
   else topjet_corr.reset(new TopJetCorrectionModules(ctx, TopJetCorrectionModules::AK8_CHS));
 
-  HOTVR_pileupCorrector.reset(new HOTVRPileupCorrectionModule());
-
-  add_genjet = ctx.get_handle<std::vector<Particle>>("slimmedGenJetsAK8");
-  topjetJER_smearer.reset(new GenericJetResolutionSmearer(ctx, "topjets", "slimmedGenJetsAK8", false));
+  //HOTVR_pileupCorrector.reset(new HOTVRPileupCorrectionModule());
+  if(useHOTVR) topjetJER_smearer.reset(new GenericJetResolutionSmearer(ctx, "topjets", "gentopjets", false));
+  else{
+    add_genjet = ctx.get_handle<std::vector<Particle>>("slimmedGenJetsAK8");
+    topjetJER_smearer.reset(new GenericJetResolutionSmearer(ctx, "topjets", "slimmedGenJetsAK8", false));
+  }
   
   topjet_groomer.reset(new TopJetGroomer()); // just take the subjet sum (make sure that the subjets are corrected properly)
   // topjet_groomer.reset(new TopJetGroomer(false)); // just take the subjet sum (uncorrected!!!!!)
@@ -105,27 +115,43 @@ PerformanceModule::PerformanceModule(Context & ctx){
 
   _flatTree = new TTree("tree", "tree");
 
+  //ctx.do_undeclare_all_event_output();
+
   _flatTree->Branch("i_evt", &i_evt, "i_evt/I");
   _flatTree->Branch("i_parton", &i_parton, "i_parton/I");
-  _flatTree->Branch("NPV", &NPV, "NPV/I");
+  _flatTree->Branch("npv", &NPV, "npv/I");
   _flatTree->Branch("type", &type, "type/I");
 
   _flatTree->Branch("gen_pt", &gen_pt, "gen_pt/D");
   _flatTree->Branch("gen_eta", &gen_eta, "gen_eta/D");
   _flatTree->Branch("gen_phi", &gen_phi, "gen_phi/D");
 
+  _flatTree->Branch("gen_pdgId", &gen_pdgId, "gen_pdgId/I");
+
   if(useHOTVR){
     _flatTree->Branch("clf_Nsubjets" , &clf_Nsubjets, "clf_Nsubjets/I");
     _flatTree->Branch("clf_jetmass" , &clf_jetmass, "clf_jetmass/D");
     _flatTree->Branch("clf_fpt" , &clf_fpt, "clf_fpt/D");
     _flatTree->Branch("clf_mpair" , &clf_mpair , "clf_mpair/D");
-    _flatTree->Branch("clf_tau32_groomed" , &clf_tau32_groomed , "clf_tau32_groomed/D");
+    _flatTree->Branch("clf_tau32" , &clf_tau32_groomed , "clf_tau32/D");
+  }
+  else if(useHTT){
+    //_flatTree->Branch("clf_Nsubjets", &clf_Nsubjets,       "clf_Nsubjets/I");
+    _flatTree->Branch("mass",         &clf_mass,           "clf_mass/D");
+    //  _flatTree->Branch("mass_raw",     &clf_mass_raw,       "clf_mass_raw/D");
+    //  _flatTree->Branch("mass_tag",     &clf_mass_tag,       "clf_mass_tag/D");
+    _flatTree->Branch("fRec",         &clf_fRec,           "clf_fRec/D");
+    //  _flatTree->Branch("fRec_raw",     &clf_fRec_raw,       "clf_fRec_raw/D");
+    //  _flatTree->Branch("fRec_tag",     &clf_fRec_tag,       "clf_fRec_tag/D");
+    _flatTree->Branch("clf_tau32" ,   &clf_tau32_groomed , "clf_tau32/D");
   }else{
     _flatTree->Branch("clf_softdropmass", &clf_softdropmass, "clf_softdropmass/D");
-    _flatTree->Branch("clf_softdropmass_uncorrected", &clf_softdropmass_uncorrected, "clf_softdropmass_uncorrected/D");
+    // _flatTree->Branch("clf_softdropmass_uncorrected", &clf_softdropmass_uncorrected, "clf_softdropmass_uncorrected/D");
     _flatTree->Branch("clf_tau32", &clf_tau32, "clf_tau32/D");
-    _flatTree->Branch("clf_highestSjCSV", &clf_highestSjCSV, "clf_highestSjCSV/D");
+    _flatTree->Branch("clf_highestSubjetCSV", &clf_highestSjCSV, "clf_highestSubjetCSV/D");
   }  
+
+  //_flatTree->Branch("matched", &matched, "matched/I");
 
 }
 
@@ -134,8 +160,7 @@ PerformanceModule::PerformanceModule(Context & ctx){
 bool PerformanceModule::process(Event & event){
 
   //Jet corrections
-  if(usePUPPI || useHOTVR) {
-    if(useHOTVR) HOTVR_pileupCorrector->process(event); //apply extra pileup corrections on HOTVR subjets
+  if(usePUPPI || useHTT) {
     topjet_corr->process(event); //apply topjet and subjet corrections
     topjet_groomer->process(event); //now get the subjet sum from corrected subjets
   }else{
@@ -204,10 +229,10 @@ bool PerformanceModule::FillTree(const Event & event, GenParticle part, int Npar
     }
   } 
 
-  //  if(!matchedJet){
-    // cout << "no jet matched to the particle" << endl;
+  // if(!matchedJet){
+  //  cout << "NO JET MATCHED to the particle" << endl;
   //   return false;
-  // }
+  //}
 
   //----------------------------------------------
   //for QCD only use jet with unique parton falvor
@@ -255,11 +280,17 @@ bool PerformanceModule::FillTree(const Event & event, GenParticle part, int Npar
   gen_eta = part.eta();
   gen_phi = part.phi();
 
+  gen_pdgId = part.pdgId();
+
   NPV = event.pvs->size();
  
-  if(useHOTVR) SetHOTVRVariables(jet);
-  else if (!useHOTVR) SetCMSTTv2Variables(jet);
+  if(useHOTVR && !useHTT) SetHOTVRVariables(jet, matchedJet);
+  else if (useHTT && !useHOTVR) SetHTTVariables(jet, matchedJet);
+  else if (!useHTT && !useHOTVR) SetCMSTTv2Variables(jet, matchedJet);
   else cout << "no tagger output specified" << endl;
+
+  if(matchedJet) matched = 1;
+  else matched = 0; 
 
   _flatTree->Fill();
 
@@ -334,7 +365,69 @@ vector<GenParticle> PerformanceModule::GetMergedHadronicTops(TTbarGen ttbarGen, 
 }
 
 
-bool PerformanceModule::SetCMSTTv2Variables(const TopJet jet){
+bool PerformanceModule::SetHTTVariables(const TopJet jet, bool matched){
+
+  auto subjets = jet.subjets();
+  sort_by_pt(subjets);
+  
+  clf_Nsubjets = subjets.size();
+
+  LorentzVector subjet_sum(0,0,0,0);
+  for (const auto s : subjets) {
+    subjet_sum += s.v4();
+  }
+
+  LorentzVector subjet_sumUNCORR(0,0,0,0);
+  for (const auto s : subjets) {
+    subjet_sumUNCORR += s.v4()*s.JEC_factor_raw();
+  }
+  
+  double mass = subjet_sum.M();
+  double mass_raw = subjet_sumUNCORR.M();
+
+  double m12 = 0., m13 = 0., m23 = 0.;
+  if(subjets.size() > 2){
+    m12 = (subjets.at(0).v4() + subjets.at(1).v4()).M();
+    m13 = (subjets.at(0).v4() + subjets.at(2).v4()).M();
+    m23 = (subjets.at(1).v4() + subjets.at(2).v4()).M();
+  }
+
+  double m12_raw = 0., m13_raw = 0., m23_raw = 0.;
+  if(subjets.size() > 2){
+    m12_raw = (subjets.at(0).v4()*subjets.at(0).JEC_factor_raw() + subjets.at(1).v4()*subjets.at(1).JEC_factor_raw()).M();
+    m13_raw = (subjets.at(0).v4()*subjets.at(0).JEC_factor_raw() + subjets.at(2).v4()*subjets.at(2).JEC_factor_raw()).M();
+    m23_raw = (subjets.at(1).v4()*subjets.at(1).JEC_factor_raw() + subjets.at(2).v4()*subjets.at(2).JEC_factor_raw()).M();
+  }
+
+  double mW_mt = 80.4/172.3;
+
+  double fRec = 0.;
+  if(subjets.size() > 2) fRec = min(fabs(((m12/mass)/mW_mt)-1), min( fabs(((m23/mass)/mW_mt)-1), fabs(((m13/mass)/mW_mt)-1)));
+
+  double fRec_raw = 0.;
+  if(subjets.size() > 2)fRec_raw = min(fabs(((m12_raw/mass_raw)/mW_mt)-1), min( fabs(((m23_raw/mass_raw)/mW_mt)-1), fabs(((m13_raw/mass_raw)/mW_mt)-1)));
+
+  double fRec_tag = 0.;
+  if (jet.has_tag(jet.tagname2tag("fRec"))) fRec_tag = jet.get_tag(jet.tagname2tag("fRec"));
+
+  double mass_tag = 0.;
+  if (jet.has_tag(jet.tagname2tag("mass"))) mass_tag = jet.get_tag(jet.tagname2tag("mass"));			
+  
+  clf_Nsubjets = subjets.size();
+  clf_mass = mass;
+  clf_mass_raw = mass_raw;
+  clf_mass_tag = mass_tag;
+  clf_fRec = fRec;
+  clf_fRec_raw = fRec_raw;
+  clf_fRec_tag = fRec_tag;
+  clf_tau32_groomed = jet.tau3_groomed()/jet.tau2_groomed();
+  
+  if(!matched) clf_tau32_groomed = 99.;
+  
+  return true;
+}
+
+bool PerformanceModule::SetCMSTTv2Variables(const TopJet jet, bool matched){
   auto subjets = jet.subjets();
 
   LorentzVector subjet_sum(0,0,0,0);
@@ -351,7 +444,9 @@ bool PerformanceModule::SetCMSTTv2Variables(const TopJet jet){
   clf_softdropmass_uncorrected = subjet_sumUNCORR.M();
   clf_tau32 = jet.tau3()/jet.tau2();
 
-  double highestCSV = -10;
+  if(!matched) clf_tau32 = 99.;
+
+  double highestCSV = 0.;
   for (const auto s : subjets) {
     double CSV = s.btag_combinedSecondaryVertex();
     if(CSV > highestCSV) highestCSV = CSV;
@@ -362,7 +457,7 @@ bool PerformanceModule::SetCMSTTv2Variables(const TopJet jet){
   return true;
 } 
 
-bool PerformanceModule::SetHOTVRVariables(const TopJet jet){
+bool PerformanceModule::SetHOTVRVariables(const TopJet jet, bool matched){
 
   double m12 = 0., m13 = 0., m23 = 0.;
 
@@ -389,6 +484,8 @@ bool PerformanceModule::SetHOTVRVariables(const TopJet jet){
   clf_jetmass = jet.v4().M();
 
   clf_tau32_groomed = jet.tau3_groomed()/jet.tau2_groomed();
+  
+  if(!matched) clf_tau32_groomed = 99.;
 
   return true;
 } 
