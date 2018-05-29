@@ -64,7 +64,7 @@ TTEfficiencyPreSelectionModule::TTEfficiencyPreSelectionModule(Context & ctx){
   common->switch_metcorrection();
 
   common->disable_mcpileupreweight();
-  //common->disable_jersmear();
+  common->disable_jersmear();
 
   common->init(ctx);
   cout << "common init" <<endl;
