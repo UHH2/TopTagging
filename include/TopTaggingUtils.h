@@ -40,6 +40,19 @@ class TopJetCorrectionModules : public uhh2::AnalysisModule {
 };
 
 
+class Muon_dxydzCut {
+public:
+ Muon_dxydzCut(float max_dxy_ , float max_dz_): max_dxy(max_dxy_), max_dz(max_dz_){}
+
+    bool operator()(const Muon & muon, const uhh2::Event & ) const{
+      return fabs(muon.dxy()) < max_dxy && fabs(muon.dxy()) < max_dz;
+    }
+    
+private:
+    float max_dxy, max_dz;
+};
+
+
 class HOTVRPileupCorrectionModule : public uhh2::AnalysisModule {
  public:
   explicit HOTVRPileupCorrectionModule(bool area_correction = true): _area_correction(area_correction) {}

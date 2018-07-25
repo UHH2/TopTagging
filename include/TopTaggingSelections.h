@@ -40,6 +40,16 @@ class HTCut: public uhh2::Selection {
 
 };
 
+class PtWSelection: public uhh2::Selection {
+ public:
+  explicit PtWSelection(double minPt_, double maxPt_ = uhh2::infinity);
+  virtual bool passes(const uhh2::Event&) override;
+
+ private:
+  double minPt, maxPt;
+
+};
+
 class HTlepCut: public uhh2::Selection {
   public:
     explicit HTlepCut(double minHTLep_, double maxHTLep_, bool useMuons_ = true, bool useElectrons_ = true);

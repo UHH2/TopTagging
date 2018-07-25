@@ -13,9 +13,10 @@
 //#include <UHH2/common/include/JetCorrections.h>
 #include <UHH2/common/include/ObjectIdUtils.h>
 #include <UHH2/common/include/MuonIds.h>
-#include <UHH2/common/include/ElectronIds.h>
+//#include <UHH2/common/include/ElectronIds.h>
 #include <UHH2/common/include/JetIds.h>
 #include "UHH2/common/include/NSelections.h"
+#include "UHH2/common/include/TriggerSelection.h"
 #include "UHH2/TopTagging/include/TopTaggingSelections.h"
 #include <UHH2/common/include/Utils.h>
 
@@ -39,25 +40,28 @@ private:
   std::unique_ptr<JetCleaner> jet_cleaner;
 
   //selections
-  // std::unique_ptr<uhh2::Selection> muon_sel, pv_sel, jet_sel;
-  std::unique_ptr<uhh2::Selection> htlep_sel, met_sel;
+  std::unique_ptr<uhh2::Selection> met_sel, ptW_sel;
   std::unique_ptr<AndSelection> pre_selection;
+  std::vector<std::unique_ptr<uhh2::Selection>> trigger_selections;
 
   //histograms
   std::vector<std::unique_ptr<uhh2::Hists>> hists_before_presel;
   std::vector<std::unique_ptr<uhh2::Hists>> hists_after_presel; 
+
+  bool isMC;
 };
 
 
 TTEfficiencyPreSelectionModule::TTEfficiencyPreSelectionModule(Context & ctx){
 
+  isMC = (ctx.get("dataset_type") == "MC");
+
+  // MuonId muid = AndId<Muon>(MuonIDTight(), PtEtaCut(45., 2.4));
   MuonId muid = AndId<Muon>(MuonIDTight(), PtEtaCut(55., 2.4));
-  ElectronId eleid = AndId<Electron>(ElectronID_Spring16_medium_noIso, PtEtaCut(55., 2.4));
 
   common.reset(new CommonModules());
 
   common->set_muon_id(muid);
-  common->set_electron_id(eleid);
 
   common->switch_jetlepcleaner(true);
   common->switch_jetPtSorter();
@@ -73,11 +77,17 @@ TTEfficiencyPreSelectionModule::TTEfficiencyPreSelectionModule(Context & ctx){
 
   //selections
   met_sel.reset(new METCut(20., std::numeric_limits<double>::infinity()));
-  htlep_sel.reset(new HTlepCut(70., std::numeric_limits<double>::infinity()));
+  ptW_sel.reset(new PtWSelection(100.));
  
   pre_selection.reset(new AndSelection(ctx,"first selection"));  
   pre_selection->add<NMuonSelection>("Number of muons == 1",1,1);
   pre_selection->add<NJetSelection>("Number of jets >= 2",2);
+
+  // trigger_selections.emplace_back(new TriggerSelection("HLT_IsoMu24_v*")); //old selection
+  //trigger_selections.emplace_back(new TriggerSelection("HLT_IsoTkMu24_v*"));
+
+  trigger_selections.emplace_back(new TriggerSelection("HLT_Mu50_v*"));
+  trigger_selections.emplace_back(new TriggerSelection("HLT_TkMu50_v*"));
  
   //histograms
   hists_before_presel.emplace_back(new EventHists(ctx, "Event_before_presel"));
@@ -101,14 +111,14 @@ TTEfficiencyPreSelectionModule::TTEfficiencyPreSelectionModule(Context & ctx){
 bool TTEfficiencyPreSelectionModule::process(Event & event) {
    
   //cout << "TTEfficiencyPreSelectionModule: Starting to process event (runid, eventid) = (" << event.run << ", " << event.event << "); weight = " << event.weight << endl;
-
+  
   //fill histograms before preselection
   for(auto & h : hists_before_presel){
     h->fill(event);
   }
 
   //keep uncleaned jets and MET
-  std::unique_ptr< std::vector<Jet> >    uncleaned_jets   (new std::vector<Jet>   (*event.jets));
+  std::unique_ptr< std::vector<Jet> > uncleaned_jets   (new std::vector<Jet>   (*event.jets));
   std::unique_ptr<MET> uncleaned_met(new MET(*event.met));
 
   //run corrections
@@ -120,8 +130,15 @@ bool TTEfficiencyPreSelectionModule::process(Event & event) {
     
   //apply selections
   if(!pre_selection->passes(event)) return false;
+  bool triggered = false;
+  for( const auto & triggersel : trigger_selections){
+    if(triggersel->passes(event)) triggered = true;
+    if(!isMC && event.run < 274954) break;
+  }
+  if(!triggered) return false;
+
   if(!met_sel->passes(event)) return false;
-  if(!htlep_sel->passes(event)) return false;
+  if(!ptW_sel->passes(event)) return false;
  
   // store uncleaned jets and MET
   event.jets->clear();

@@ -14,6 +14,24 @@
 using namespace std; 
 using namespace uhh2;
 
+class GenObject{
+public:
+  GenObject(){
+    m_size = 0.;
+    m_pt = 0.;
+  }
+  void setGenParticle(GenParticle part) {m_part = part; m_pt = part.pt();}
+  GenParticle getGenParticle() {return m_part;}
+  double pt() const {return m_pt;}
+  void setGenSize(double size) {m_size = size;}
+  double gen_size() const { return m_size;}
+
+private:
+  GenParticle m_part;
+  double m_size;
+  double m_pt;
+};
+
 class PerformanceModule: public AnalysisModule {
 
 public:
@@ -24,9 +42,9 @@ public:
 
 private:
 
-  vector<GenParticle> GetMergedHadronicTops(TTbarGen ttbarGen, double ptMin, double ptMax, double etaMax, double radius);
-  vector<GenParticle> GetQuarksAndGluons(vector<GenParticle> genpaticles, double ptMin, double ptMax, double etaMax);
-  bool FillTree(const Event & event, GenParticle part, int Npart);
+  vector<GenObject> GetMergedHadronicTops(TTbarGen ttbarGen, double ptMin, double ptMax, double etaMax, double radius);
+  vector<GenObject> GetQuarksAndGluons(vector<GenParticle> genpaticles, double ptMin, double ptMax, double etaMax);
+  bool FillTree(const Event & event, GenObject part, int Npart);
   bool SetCMSTTv2Variables(const TopJet jet, bool matched);
   bool SetHOTVRVariables(const TopJet jet, bool matched);
   bool SetHTTVariables(const TopJet jet, bool matched);
@@ -36,6 +54,7 @@ private:
   std::unique_ptr<uhh2::AnalysisModule> HOTVR_pileupCorrector;
   std::unique_ptr<GenericJetResolutionSmearer> topjetJER_smearer;
   std::unique_ptr<TopJetGroomer> topjet_groomer;
+  unique_ptr<uhh2::AnalysisModule> topjet_cleaner;
   
   //ttbar gen 
   unique_ptr<uhh2::AnalysisModule> ttbarGenProducer;
@@ -51,7 +70,7 @@ private:
  
   //output variables
   int i_evt, i_parton, NPV, type, matched, gen_pdgId;
-  double gen_pt, gen_eta, gen_phi;
+  double gen_pt, gen_eta, gen_phi, gen_size;
 
   //CMSTopTaggerV2 vriables
   double clf_softdropmass, clf_tau32, clf_highestSjCSV, clf_softdropmass_uncorrected;
@@ -59,6 +78,7 @@ private:
   //HOTVR variables
   int clf_Nsubjets;
   double clf_jetmass, clf_fpt, clf_mpair, clf_tau32_groomed;
+  double dr_jet;
 
   //HTT variables
   double clf_mass, clf_mass_raw, clf_mass_tag, clf_fRec, clf_fRec_raw, clf_fRec_tag;
@@ -85,14 +105,16 @@ PerformanceModule::PerformanceModule(Context & ctx){
 
   useJetFlavor = (ctx.get("useJetFlavor", "<not set>") == "TRUE");
 
+  topjet_cleaner.reset(new TopJetCleaner(ctx, TopJetId(PtEtaCut(0., 5.0))));
+
   //JEC and JER settings 
  
-  if(useHOTVR && !usePUPPI) topjet_corr.reset(new TopJetCorrectionModules(ctx, TopJetCorrectionModules::HOTVR_CHS));
-  else if(useHOTVR && usePUPPI) topjet_corr.reset(new TopJetCorrectionModules(ctx, TopJetCorrectionModules::HOTVR_PUPPI));
-  else if(usePUPPI) topjet_corr.reset(new TopJetCorrectionModules(ctx, TopJetCorrectionModules::AK8_PUPPI));
+  //if(useHOTVR && !usePUPPI) topjet_corr.reset(new TopJetCorrectionModules(ctx, TopJetCorrectionModules::HOTVR_CHS));
+  //else if(useHOTVR && usePUPPI) topjet_corr.reset(new TopJetCorrectionModules(ctx, TopJetCorrectionModules::HOTVR_PUPPI));
+  //else if(usePUPPI) topjet_corr.reset(new TopJetCorrectionModules(ctx, TopJetCorrectionModules::AK8_PUPPI));
+  if(usePUPPI) topjet_corr.reset(new TopJetCorrectionModules(ctx, TopJetCorrectionModules::AK8_PUPPI));
   else topjet_corr.reset(new TopJetCorrectionModules(ctx, TopJetCorrectionModules::AK8_CHS));
 
-  //HOTVR_pileupCorrector.reset(new HOTVRPileupCorrectionModule());
   if(useHOTVR) topjetJER_smearer.reset(new GenericJetResolutionSmearer(ctx, "topjets", "gentopjets", false));
   else{
     add_genjet = ctx.get_handle<std::vector<Particle>>("slimmedGenJetsAK8");
@@ -100,14 +122,10 @@ PerformanceModule::PerformanceModule(Context & ctx){
   }
   
   topjet_groomer.reset(new TopJetGroomer()); // just take the subjet sum (make sure that the subjets are corrected properly)
-  // topjet_groomer.reset(new TopJetGroomer(false)); // just take the subjet sum (uncorrected!!!!!)
 
   //ttbar gen settings
   ttbarGenProducer.reset(new TTbarGenProducer(ctx, "ttbargen", true));
   h_ttbarGen = ctx.get_handle<TTbarGen>("ttbargen");
-
-  //extra top jet collection for matching
-  h_CHSTopJets = ctx.get_handle<vector<TopJet>>("slimmedJetsAK8_SoftDrop");
 
   //set tree branches
   type = 0; 
@@ -125,10 +143,12 @@ PerformanceModule::PerformanceModule(Context & ctx){
   _flatTree->Branch("gen_pt", &gen_pt, "gen_pt/D");
   _flatTree->Branch("gen_eta", &gen_eta, "gen_eta/D");
   _flatTree->Branch("gen_phi", &gen_phi, "gen_phi/D");
+  _flatTree->Branch("gen_size", &gen_size, "gen_size/D");
 
   _flatTree->Branch("gen_pdgId", &gen_pdgId, "gen_pdgId/I");
 
   if(useHOTVR){
+    _flatTree->Branch("dr_jet" , &dr_jet, "dr_jet/D");
     _flatTree->Branch("clf_Nsubjets" , &clf_Nsubjets, "clf_Nsubjets/I");
     _flatTree->Branch("clf_jetmass" , &clf_jetmass, "clf_jetmass/D");
     _flatTree->Branch("clf_fpt" , &clf_fpt, "clf_fpt/D");
@@ -159,8 +179,31 @@ PerformanceModule::PerformanceModule(Context & ctx){
 
 bool PerformanceModule::process(Event & event){
 
+
+  for(const auto & topjet: *event.topjets){
+    cout << "event: "<< event.event << "   topjet pt: " << topjet.pt() << endl;
+
+    LorentzVector subjet_sum(0,0,0,0);
+    for (const auto s : topjet.subjets()) {
+      subjet_sum += s.v4();
+    }
+    cout << "   subjet sum pt: " << subjet_sum.Pt() << endl;
+    
+    for(const auto & subjet: topjet.subjets()){
+      cout << "            subjet pt: " << subjet.pt() << endl;
+    }
+  }
+ 
+  assert(event.topjets);
+
   //Jet corrections
-  if(usePUPPI || useHTT) {
+  if(useHOTVR){
+    topjet_corr->process(event); 
+    topjet_groomer->process(event);
+    //topjet_cleaner->process(event);
+    //topjetJER_smearer->process(event);
+  }
+  else if(useHTT) {
     topjet_corr->process(event); //apply topjet and subjet corrections
     topjet_groomer->process(event); //now get the subjet sum from corrected subjets
   }else{
@@ -169,17 +212,19 @@ bool PerformanceModule::process(Event & event){
   }
 
   // particles
-  vector<GenParticle> parts;
+  vector<GenObject> parts;
 
   if(version.Contains("Zprime")){
     ttbarGenProducer->process(event);
     const auto & ttbarGen = event.get(h_ttbarGen);
-    if(version.Contains("highPt")) parts = GetMergedHadronicTops(ttbarGen, 1000., 1400., 1.5, 0.6);
-    else parts = GetMergedHadronicTops(ttbarGen, 300., 470., 2.4, 1.2);
+    //if(version.Contains("highPt")) parts = GetMergedHadronicTops(ttbarGen, 1000., 1400., 1.5, 0.6);
+    //else parts = GetMergedHadronicTops(ttbarGen, 300., 470., 2.4, 1.2);
+    parts = GetMergedHadronicTops(ttbarGen, 200., uhh2::infinity, 2.4, 99.);
   }
   if(version.Contains("QCD")){
-    if(version.Contains("highPt")) parts = GetQuarksAndGluons(*event.genparticles, 1000., 1400., 1.5);
-    else parts = GetQuarksAndGluons(*event.genparticles, 300., 470., 2.4);
+    //if(version.Contains("highPt")) parts = GetQuarksAndGluons(*event.genparticles, 1000., 1400., 1.5);
+    //else parts = GetQuarksAndGluons(*event.genparticles, 300., 470., 2.4);
+    parts = GetQuarksAndGluons(*event.genparticles, 200., uhh2::infinity, 2.4);
   }
 
   //fill output tree
@@ -192,8 +237,6 @@ bool PerformanceModule::process(Event & event){
   return true;
 }
 
-
-
 PerformanceModule::~PerformanceModule(){
   TFile* _file = new TFile(fileName, "Recreate");
    _flatTree->Write("PerformanceTree");
@@ -202,73 +245,58 @@ PerformanceModule::~PerformanceModule(){
 
 
 
-bool PerformanceModule::FillTree(const Event & event, GenParticle part, int Npart){
+bool PerformanceModule::FillTree(const Event & event, GenObject g_part, int Npart){
 
   //-------------------------------------------
   //get TopJets and match them to the particle
   //-------------------------------------------
   vector<TopJet> topjets = *event.topjets;
+  GenParticle part = g_part.getGenParticle();
 
   bool matchedJet = false;
   double radius = 0.6;
   TopJet jet; 
- 
-  double mindR = 0.6;
+
+  double mindR = 5.;
   // double maxPt = 1.;
   for( const auto & topjet : topjets){
     double dR = deltaR( topjet.v4(), part.v4());
-    if(dR < radius){
+    if(useHOTVR){
+      /*   cout << "jet pt: " << topjet.pt() << endl;
+	   for( const auto & subj : topjet.subjets()){
+	   cout << "  subjet pt: " << subj.pt() << endl;
+	   }
+      */
+      radius = 600./topjet.pt();
+      if(radius < 0.1) radius = 0.1;
+      if(radius > 1.5) radius = 1.5;
+      radius *= 0.75;
+    }
+    if(useHOTVR){
       if(dR < mindR){
-	//if(topjet.pt() > maxPt){
-	if(matchedJet) cout << "more than one jet to match" << endl;
 	jet = topjet;
 	mindR = dR;
 	//maxPt = topjet.pt();
 	matchedJet = true;
       }
-    }
-  } 
-
+    }else{
+      if(dR < radius){
+	if(dR < mindR){
+	  //if(topjet.pt() > maxPt){
+	  if(matchedJet) cout << "more than one jet to match" << endl;
+	  jet = topjet;
+	  mindR = dR;
+	  //maxPt = topjet.pt();
+	  matchedJet = true;
+	}
+      }
+    } 
+  }
+ 
   // if(!matchedJet){
   //  cout << "NO JET MATCHED to the particle" << endl;
   //   return false;
   //}
-
-  //----------------------------------------------
-  //for QCD only use jet with unique parton falvor
-  //----------------------------------------------
-  //jet hadron falvor and parton falvor are just stored for CHS TopJets in 2016 MC. Therfore a CHS jet is matched to the PUPPI jet to obtain the flavor information. 
-  // this should be fixed with 2017 MC 
-  if(useJetFlavor && matchedJet && version.Contains("QCD")){
-
-    int parton_flavor = 0;
-    //  int hadron_flavor = 0;
-    if(usePUPPI || useHOTVR){
-      const vector<TopJet> & CHSJets = event.get(h_CHSTopJets);
-      bool matched_CHSjet = false; 
-      double minDR = 10;
-      for(const auto & CHSJet : CHSJets){
-	if(deltaR(CHSJet.v4(), jet.v4()) < minDR) minDR = deltaR(CHSJet.v4(), jet.v4());
-	if( deltaR(CHSJet.v4(), jet.v4()) < 0.4 ){
-	  if(matched_CHSjet) cout << "more than one CHS candidate" << endl;
-	  matched_CHSjet = true;
-	  parton_flavor = CHSJet.pdgId();
-	  //  hadron_flavor = CHSJet.pdgId();
-	}
-      }  
-      if(!matched_CHSjet){
-	cout << "No CHS jet matched  (dRmin = " << minDR << ")" <<endl;
-	return false;
-      }
-    }else{
-      parton_flavor = jet.pdgId();
-    }
-    if(part.pdgId() != parton_flavor ){
-      // cout << "wrong jet flavor" <<endl;
-      return false;
-    }
-  }
-
 
   //----------------------------------------------
   //set the output variables
@@ -279,6 +307,9 @@ bool PerformanceModule::FillTree(const Event & event, GenParticle part, int Npar
   gen_pt = part.pt();
   gen_eta = part.eta();
   gen_phi = part.phi();
+  gen_size = g_part.gen_size();
+
+  dr_jet = mindR;
 
   gen_pdgId = part.pdgId();
 
@@ -298,9 +329,9 @@ bool PerformanceModule::FillTree(const Event & event, GenParticle part, int Npar
 }
 
 
-vector<GenParticle> PerformanceModule::GetQuarksAndGluons(vector<GenParticle> genpaticles, double ptMin, double ptMax, double etaMax){
+vector<GenObject> PerformanceModule::GetQuarksAndGluons(vector<GenParticle> genpaticles, double ptMin, double ptMax, double etaMax){
 
-  vector<GenParticle> parts;
+  vector<GenObject> parts;
 
   for(const auto & part : genpaticles){
     int absId = fabs(part.pdgId());
@@ -309,52 +340,65 @@ vector<GenParticle> PerformanceModule::GetQuarksAndGluons(vector<GenParticle> ge
 	&& part.status() == 23
 	&& part.pt() > ptMin 
 	&& part.pt() < ptMax 
-	&& fabs(part.eta()) < etaMax){ 
-      parts.push_back(part);
+	&& fabs(part.eta()) < etaMax){
+      GenObject g_part;
+      g_part.setGenParticle(part);
+      parts.push_back(g_part);
     }
   }
 
+  sort_by_pt(parts);
   return parts;
 
 }
 
 
-vector<GenParticle> PerformanceModule::GetMergedHadronicTops(TTbarGen ttbarGen, double ptMin, double ptMax, double etaMax, double radius){
+vector<GenObject> PerformanceModule::GetMergedHadronicTops(TTbarGen ttbarGen, double ptMin, double ptMax, double etaMax, double radius){
 
-  vector<GenParticle> tops; 
+  vector<GenObject> tops; 
 
   if(ttbarGen.IsTopHadronicDecay()) {
-    GenParticle top = ttbarGen.Top();
+    GenParticle top = ttbarGen.Top_beforeDecay();
     vector<GenParticle> quarks;
     quarks.push_back(ttbarGen.bTop());
     quarks.push_back(ttbarGen.Wdecay1());
     quarks.push_back(ttbarGen.Wdecay2());
     bool merged = true;
+    double gen_size = 0.;
     for( const auto & q : quarks){
       if( deltaR(top.v4(), q.v4()) > radius ) merged = false;
+      if( deltaR(top.v4(), q.v4()) > gen_size) gen_size = deltaR(top.v4(), q.v4());
     }
     if( merged 
 	&& top.pt() > ptMin 
 	&& top.pt() < ptMax 
-	&& fabs(top.eta()) < etaMax){ 
-      tops.push_back(top);
+	&& fabs(top.eta()) < etaMax){
+      GenObject g_top;
+      g_top.setGenParticle(top);
+      g_top.setGenSize(gen_size);
+      tops.push_back(g_top);
     }
   }
   if(ttbarGen.IsAntiTopHadronicDecay()) {
-    GenParticle top = ttbarGen.Antitop();
+    GenParticle top = ttbarGen.Antitop_beforeDecay();
     vector<GenParticle> quarks;
     quarks.push_back(ttbarGen.bAntitop());
     quarks.push_back(ttbarGen.WMinusdecay1());
     quarks.push_back(ttbarGen.WMinusdecay2());
     bool merged = true;
+    double gen_size = 0.;
     for( const auto & q : quarks){
       if( deltaR(top.v4(), q.v4()) > radius ) merged = false;
+      if( deltaR(top.v4(), q.v4()) > gen_size) gen_size = deltaR(top.v4(), q.v4()); 
     }
     if( merged 
 	&& top.pt() > ptMin 
 	&& top.pt() < ptMax 
 	&& fabs(top.eta()) < etaMax){ 
-      tops.push_back(top);
+      GenObject g_top;
+      g_top.setGenParticle(top);
+      g_top.setGenSize(gen_size);
+      tops.push_back(g_top);
     }
   }
   
@@ -428,6 +472,7 @@ bool PerformanceModule::SetHTTVariables(const TopJet jet, bool matched){
 }
 
 bool PerformanceModule::SetCMSTTv2Variables(const TopJet jet, bool matched){
+
   auto subjets = jet.subjets();
 
   LorentzVector subjet_sum(0,0,0,0);

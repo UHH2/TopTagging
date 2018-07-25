@@ -41,18 +41,16 @@ private:
     
   //correctors
   std::unique_ptr<CommonModules> common;
-  std::unique_ptr<uhh2::AnalysisModule> pileupRW;
 
   //reweighting and scale factors
   std::vector<std::unique_ptr<AnalysisModule>> reweighting_modules;
   std::unique_ptr<uhh2::AnalysisModule> muo_tight_noniso_SF, muo_trigger_SF;
-  std::unique_ptr<AnalysisModule> btagwAK8, subjet_btagwAK8;
-  std::unique_ptr<AnalysisModule> subjet_btagwAK8_300to400, subjet_btagwAK8_400to480, subjet_btagwAK8_480to600, subjet_btagwAK8_600;
+  std::unique_ptr<AnalysisModule> btagwAK8;
   std::unique_ptr<uhh2::AnalysisModule> scale_variation;
   std::unique_ptr<GenericJetResolutionSmearer> topjetJER_smearer;
 
   //selections
-  std::unique_ptr<uhh2::Selection> hadronic_selection, lepton_jets_seletion, dilepton_selection, tau_jets_selection; 
+  std::unique_ptr<uhh2::Selection> hadronic_selection, lepton_jets_seletion, dilepton_selection, tau_jets_selection, mttgen_sel; 
   std::unique_ptr<MergedSelection> merged_selection, mergedW_selection, mergedQB_selection, mergedEvent_selection; 
   std::unique_ptr<MassDiffSelection> massDiff_selection;
   std::unique_ptr<DPhiMuBSelection> dphi_selection;
@@ -104,11 +102,6 @@ TTEfficiencyPostSelectionModule::TTEfficiencyPostSelectionModule(Context & ctx){
   //=============================
   // access configuaration values
   //=============================
-
-  string testvalue = ctx.get("TestKey", "<not set>");
-  cout << "TestKey in the configuration was: " << testvalue << endl;
-
-  string triggerName = ctx.get("Trigger", "<not set>");
 
   isMC = (ctx.get("dataset_type") == "MC");
   
@@ -185,20 +178,20 @@ TTEfficiencyPostSelectionModule::TTEfficiencyPostSelectionModule(Context & ctx){
 
   // if (version == "TTbar_Incl" || version ==  "TTbar_700to1000" || version ==  "TTbar_1000toInf") {
   if ( vers.Contains("TTbar") ) {
-    //reweighting_modules.emplace_back(new TTbarGenProducer(ctx, "ttbargen", true));
+    reweighting_modules.emplace_back(new TTbarGenProducer(ctx, "ttbargen", true));
     // reweighting_modules.emplace_back(new TopPtReweight(ctx, 0.156, -0.00137, "ttbargen", "weight_ttbar", true)); //8TeV
     if(TopPtReweighting) reweighting_modules.emplace_back(new TopPtReweight(ctx, 0.0615, -0.0005, "ttbargen", "weight_ttbar", true)); //13TeV
   }
 
   //  btagwAK8.reset(new MCBTagScaleFactor(ctx, CSVBTag::WP_LOOSE, "jets","central","mujets","incl","MCBtagEfficiencies"));
   btagwAK8.reset(new MCBTagScaleFactor(ctx, CSVBTag::WP_MEDIUM, "jets", BTag_variation,"mujets","incl","MCBtagEfficiencies"));
-
+  /*
   subjet_btagwAK8.reset(new MCBTagScaleFactor(ctx, CSVBTag::WP_LOOSE, "topjets", BTag_variation,"lt","incl","MCSubjetBtagEfficiencies","", "SubjetBTagCalibration"));//,"SubjetBTagCalibration"));
   subjet_btagwAK8_300to400.reset(new MCBTagScaleFactor(ctx, CSVBTag::WP_LOOSE, "topjets",BTag_variation,"lt","incl","MCSubjetBtagEfficiencies_300to400","", "SubjetBTagCalibration"));
   subjet_btagwAK8_400to480.reset(new MCBTagScaleFactor(ctx, CSVBTag::WP_LOOSE, "topjets",BTag_variation,"lt","incl","MCSubjetBtagEfficiencies_400to480","", "SubjetBTagCalibration"));
   subjet_btagwAK8_480to600.reset(new MCBTagScaleFactor(ctx, CSVBTag::WP_LOOSE, "topjets",BTag_variation,"lt","incl","MCSubjetBtagEfficiencies_480to600","", "SubjetBTagCalibration"));
   subjet_btagwAK8_600.reset(new MCBTagScaleFactor(ctx, CSVBTag::WP_LOOSE,  "topjets",BTag_variation,"lt","incl","MCSubjetBtagEfficiencies_600","", "SubjetBTagCalibration"));
-
+  */
 
   muo_tight_noniso_SF.reset(new MCMuonScaleFactor(ctx,"/nfs/dust/cms/user/dreyert/CMSSW_8_0_24_patch1/src/UHH2/common/data//MuonID_EfficienciesAndSF_average_RunBtoH.root","MC_NUM_TightID_DEN_genTracks_PAR_pt_eta",1, "tightID", true, MuonID_variation));
   muo_trigger_SF.reset(new MCMuonScaleFactor(ctx,"/nfs/dust/cms/user/dreyert/CMSSW_8_0_24_patch1/src/UHH2/common/data//MuonTrigger_EfficienciesAndSF_average_RunBtoH.root","IsoMu50_OR_IsoTkMu50_PtEtaBins",1, "muonTrigger", true, MuonTrigger_variation));
@@ -219,13 +212,8 @@ TTEfficiencyPostSelectionModule::TTEfficiencyPostSelectionModule(Context & ctx){
   //---------
   double jet_radius = 0.;
   if (useHTT) jet_radius = 1.5; 
+  else if(useHOTVR) jet_radius = -1.0;
   else jet_radius = 0.8; 
-  
-  if(useHOTVR) jet_radius = -1.0;
-
-  merged_selection.reset( new MergedSelection(ctx, "ttbargen", jet_radius));
-  mergedW_selection.reset( new MergedSelection(ctx, "ttbargen", jet_radius, MergedSelection::oMergedW));
-  mergedQB_selection.reset( new MergedSelection(ctx, "ttbargen", jet_radius, MergedSelection::oBplusQ));
  
   merged_category = true;
   if (merged == "mergedTop" || merged == "notmergedTop") mergedEvent_selection.reset( new MergedSelection(ctx, "ttbargen", jet_radius));
@@ -236,9 +224,6 @@ TTEfficiencyPostSelectionModule::TTEfficiencyPostSelectionModule(Context & ctx){
   else if (merged == "notmerged") mergedEvent_selection.reset( new MergedSelection(ctx, "ttbargen", jet_radius, MergedSelection::oNotMerged));
   else if (merged == "semimerged") mergedEvent_selection.reset( new MergedSelection(ctx, "ttbargen", jet_radius, MergedSelection::oSemiMerged));
   else merged_category = false;
-
-  invert_merged_selection = false;
-  if (merged == "notmergedTop") {invert_merged_selection = true; merged_category = false;}
 
   if (!(vers.Contains("TTbar"))){
     merged_category = false;
@@ -251,6 +236,7 @@ TTEfficiencyPostSelectionModule::TTEfficiencyPostSelectionModule(Context & ctx){
   //===========================
   //additional selections
   //===========================
+  mttgen_sel.reset(new MttbarGenSelection(0., 700.));
 
   massDiff_selection.reset( new MassDiffSelection() );
   dphi_selection.reset(new DPhiMuBSelection( CSVBTag(CSVBTag::WP_MEDIUM), 1.2));
@@ -261,16 +247,9 @@ TTEfficiencyPostSelectionModule::TTEfficiencyPostSelectionModule(Context & ctx){
   //histograms
   //===========================
 
-  hists_subjet_btag_eff.reset(new BTagMCEfficiencyHists(ctx,"SubjetBTag",CSVBTag::WP_LOOSE, "topjets") );
-
-  hists_subjet_btag_eff_300to400.reset(new BTagMCEfficiencyHists(ctx,"SubjetBTag_300to400",CSVBTag::WP_LOOSE, "topjets") );
-  hists_subjet_btag_eff_400to480.reset(new BTagMCEfficiencyHists(ctx,"SubjetBTag_400to480",CSVBTag::WP_LOOSE, "topjets") );
-  hists_subjet_btag_eff_480to600.reset(new BTagMCEfficiencyHists(ctx,"SubjetBTag_480to600",CSVBTag::WP_LOOSE, "topjets") );
-  hists_subjet_btag_eff_600.reset(new BTagMCEfficiencyHists(ctx,"SubjetBTag_600",CSVBTag::WP_LOOSE, "topjets") );
-
   hists_after_sel.emplace_back(new EventHists(ctx, "Event_sel"));
   hists_after_sel.emplace_back(new MuonHists(ctx, "Muon_sel"));
-  hists_after_sel.emplace_back(new ElectronHists(ctx, "Electron_sel"));
+  // hists_after_sel.emplace_back(new ElectronHists(ctx, "Electron_sel"));
   hists_after_sel.emplace_back(new JetHists(ctx, "Jet_sel"));
   hists_after_sel.emplace_back(new TopJetHists(ctx, "TopJet_sel"));
 
@@ -373,9 +352,6 @@ TTEfficiencyPostSelectionModule::TTEfficiencyPostSelectionModule(Context & ctx){
       }
     */
     hists_all.reset(new ProbeJetHists(ctx, "ProbeJet_All"));
-    hists_all_400.reset(new ProbeJetHists(ctx, "ProbeJet_All_Pt400"));
-    hists_all_400to550.reset(new ProbeJetHists(ctx, "ProbeJet_All_Pt400to550"));
-    hists_all_550.reset(new ProbeJetHists(ctx, "ProbeJet_All_Pt550"));
 
     hists_dilepton.reset(new ProbeJetHists(ctx, "ProbeJet_all_dilepton"));
     hists_lepton_jets.reset(new ProbeJetHists(ctx, "ProbeJet_all_lepton_jets"));
@@ -393,17 +369,12 @@ TTEfficiencyPostSelectionModule::TTEfficiencyPostSelectionModule(Context & ctx){
 
 bool TTEfficiencyPostSelectionModule::process(Event & event) {
   
-  const auto genparticles = *event.genparticles;
-  cout << "=================================================" << endl;
-  for(const auto & part: genparticles){
-    cout << "index: " << part.index() <<" status: " << part.status() << " pdgID: " << part.pdgId();
-    const auto m1 = part.mother(&genparticles, 1);
-    const auto m2 = part.mother(&genparticles, 2);
-    if(m1) cout << " mother1: " << m1->pdgId();
-    if(m2) cout << " mother1: " << m2->pdgId();
-    cout << endl;
-    //" mother1; " << (part.mother(&genparticles, 1))->pdgId()  << " mother2; " << (part.mother(&genparticles, 2))->pdgId() <<endl;
-  } 
+
+  TString vers = (TString)version;
+  if (vers.Contains("TTbar_Incl")  || vers == "TTbar_Incl") {
+    if(!mttgen_sel->passes(event)) return false;
+  }  
+
 
   //========================================
   //corrections, reweighting, scale factors
@@ -454,15 +425,14 @@ bool TTEfficiencyPostSelectionModule::process(Event & event) {
     return false;
   }
 
-
+  /*
   //throw away all other AK8Jets for Subjet-Btagging SFs
   std::vector<TopJet> new_topjets;
   new_topjets.push_back(probe_jet);
   std::swap(new_topjets, *event.topjets);
-  
-  if(invert_merged_selection){ 
-    if(mergedEvent_selection->passes_probe(event, probe_jet)) return false;
-  }
+  */
+
+  //categorization
   else if (merged_category){
     if(!mergedEvent_selection->passes_probe(event, probe_jet)) return false;
   }
@@ -520,71 +490,8 @@ bool TTEfficiencyPostSelectionModule::process(Event & event) {
   if(usePUPPI && probejet_mass > 105 && probejet_mass < 210) mass_cut = true;
   else if(!usePUPPI && probejet_mass > 105 && probejet_mass < 220) mass_cut = true;
 
-  //  std::vector<double> tau32_wps_CHS           {0.50, 0.57, 0.67, 0.81};
-  // std::vector<double> tau32_wps_PUPPI         {0.46, 0.54, 0.65, 0.80};
-
-  std::vector<double> tau32_wps_HTT_CHS       {0.49, 0.54, 0.65, 0.97, 0.98, 0.55, 0.62, 0.93, 0.97};
-  std::vector<double> fRec_wps_CHS            {0.14, 0.20, 0.25, 0.22, 0.50, 0.17, 0.27, 0.20, 0.47};
-  std::vector<double> tau32_wps_HTT_PUPPI     {0.39, 0.48, 0.60, 0.96, 0.98, 0.50, 0.60, 0.99, 0.97};
-  std::vector<double> fRec_wps_PUPPI          {0.36, 0.43, 0.22, 0.25, 0.48, 0.16, 0.25, 0.22, 0.46};
-
-  //  double fRec = 0;
-  //if(useHTT) fRec = probe_jet.get_tag( probe_jet.tagname2tag("fRec"));
-
-  // std::vector<double> tau32_wps; 
-  std::vector<double> fRec_wps; 
-  // if(!useHTT && !usePUPPI) tau32_wps = tau32_wps_CHS;
-  // else if(!useHTT && usePUPPI) tau32_wps = tau32_wps_PUPPI;
-  if(useHTT && !usePUPPI) {
-    // tau32_wps = tau32_wps_HTT_CHS; 
-    fRec_wps = fRec_wps_CHS;
-  }
-  if(useHTT && usePUPPI) {
-    //tau32_wps = tau32_wps_HTT_PUPPI; 
-    fRec_wps = fRec_wps_PUPPI;
-  }
-
   if(probejet_mass < 10) return false; //mild mass cut on the denominator 
- 
 
-  //===================
-  //fill histograms
-  //===================
-
-  hists_all->fill_probe(event, probe_jet);
-  hists_subjet_btag_eff->fill(event);
-  if(probejet_pt > 300 && probejet_pt < 400 ) hists_subjet_btag_eff_300to400->fill(event);
-  if(probejet_pt >= 400 && probejet_pt < 480 ) hists_subjet_btag_eff_400to480->fill(event);
-  if(probejet_pt >= 480 && probejet_pt < 600 ) hists_subjet_btag_eff_480to600->fill(event);
-  if(probejet_pt >= 600 ) hists_subjet_btag_eff_600->fill(event);
-
-
-  if(probejet_pt > 400) hists_all_400->fill_probe(event, probe_jet);
-  if(probejet_pt > 400 && probejet_pt < 550) hists_all_400to550->fill_probe(event, probe_jet);
-  if(probejet_pt > 550) hists_all_550->fill_probe(event, probe_jet);
-
-  /*
-  // if (version == "TTbar_Incl" || version ==  "TTbar_700to1000" || version ==  "TTbar_1000toInf") {
-  if ( ((TString)version).Contains("TTbar") ){
-    if( tau_jets_selection->passes(event) ) {
-      hists_taujets->fill_probe(event, probe_jet); 
-      if(probejet_pt > 400) hists_taujets_400->fill_probe(event, probe_jet);
-    }
-    if( lepton_jets_seletion->passes(event) ) {
-      hists_lepton_jets->fill_probe(event, probe_jet);
-      if(probejet_pt > 400) hists_lepton_jets_400->fill_probe(event, probe_jet);
-    } 
-    if( dilepton_selection->passes(event) ) {
-      hists_dilepton->fill_probe(event, probe_jet);
-      if(probejet_pt > 400) hists_dilepton_400->fill_probe(event, probe_jet);
-    }
-    if( hadronic_selection->passes(event) ) {
-      hists_hadronic->fill_probe(event, probe_jet); 
-      if(probejet_pt > 400)  hists_hadronic_400->fill_probe(event, probe_jet);
-    }
-  }
-  */
- 
   //===================
   //new working points
   //===================
@@ -598,14 +505,14 @@ bool TTEfficiencyPostSelectionModule::process(Event & event) {
   std::vector<double> fRec_wps_new; 
   if(!useHTT && !usePUPPI) tau32_wps_new = tau32_wps_CHS_new;
   else if(!useHTT && usePUPPI) tau32_wps_new = tau32_wps_PUPPI_new;
-  else if(useHTT && !usePUPPI) {
+  /*  else if(useHTT && !usePUPPI) {
     tau32_wps_new = tau32_wps_HTT_CHS; 
     fRec_wps = fRec_wps_CHS;
   }
   else if(useHTT && usePUPPI) {
     tau32_wps_new = tau32_wps_HTT_PUPPI; 
     fRec_wps = fRec_wps_PUPPI;
-  }
+    }*/
     
   for(unsigned int wp = 0; wp < tau32_wps_new.size(); ++wp){
   
@@ -628,6 +535,8 @@ bool TTEfficiencyPostSelectionModule::process(Event & event) {
   //=======================
   //fill the new histograms
   //=======================
+
+  hists_all->fill_probe(event, probe_jet);
 
   for(unsigned int bin = 0; bin < pt_bins.size(); ++bin){
     for(unsigned int wp = 0; wp < tau32_wps_new.size(); ++wp){
@@ -663,20 +572,8 @@ bool TTEfficiencyPostSelectionModule::process(Event & event) {
     
   }
   */
-  /*
- for(unsigned int bin = 0; bin < pt_bins.size(); ++bin){
-    for(unsigned int wp = 0; wp < tau32_wps_new.size(); ++wp){
 
-      bool pt_cut = get_pt_cut(bin, probejet_pt);
-      if(pt_cut){
-	if(toptag_btag.at(wp)) h_probe_btag_NoSF_pass.at(bin).at(wp)->fill_probe(event, probe_jet);
-	else h_probe_btag_NoSF_fail.at(bin).at(wp)->fill_probe(event, probe_jet);
-      }
-
-    }
-  }
-  */
-  subjet_btagwAK8->process(event);
+  // subjet_btagwAK8->process(event);
 
   // if(probejet_pt > 300 && probejet_pt < 400 ) subjet_btagwAK8_300to400->process(event);
   //if(probejet_pt >= 400 && probejet_pt < 480 ) subjet_btagwAK8_400to480->process(event);

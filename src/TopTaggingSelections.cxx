@@ -39,6 +39,26 @@ bool HTCut::passes(const Event& event){
 }
 
 
+PtWSelection::PtWSelection(double minPt_, double maxPt_):
+  minPt(minPt_), maxPt(maxPt_){}
+
+bool PtWSelection::passes(const Event& event){
+ 
+  TVector2 muon;
+  muon.SetMagPhi(event.muons->at(0).pt(), event.muons->at(0).phi());
+
+  TVector2 met;
+  met.SetMagPhi(event.met->pt(), event.met->phi());
+
+  TVector2 W = muon+met;
+ 
+  double ptW = W.Mod();
+
+  if(ptW > minPt && ptW < maxPt) return true;
+  return false;
+}
+
+
 HTlepCut::HTlepCut(double minHTLep_, double maxHTLep_, bool useMuons_, bool useElectrons_):
   minHTLep(minHTLep_), maxHTLep(maxHTLep_), useMuons(useMuons_), useElectrons(useElectrons_){}
 
@@ -86,8 +106,9 @@ bool TwoDCut::passes(const Event & event){
     }*/
 
   float drmin, ptrel;  
-  if(event.muons->size()) std::tie(drmin, ptrel) = drmin_pTrel(event.muons->at(0), *event.jets);
-  else std::tie(drmin, ptrel) = drmin_pTrel(event.electrons->at(0), *event.jets);
+  std::tie(drmin, ptrel) = drmin_pTrel(event.muons->at(0), *event.jets);
+  // if(event.muons->size()) std::tie(drmin, ptrel) = drmin_pTrel(event.muons->at(0), *event.jets);
+  //else std::tie(drmin, ptrel) = drmin_pTrel(event.electrons->at(0), *event.jets);
 
   return (drmin > min_deltaR) || (ptrel > min_pTrel);
 }
