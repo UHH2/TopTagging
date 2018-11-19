@@ -63,6 +63,7 @@ private:
   std::unique_ptr<MassDiffSelection> massDiff_selection;
   std::unique_ptr<DPhiMuBSelection> dphi_selection;
   std::unique_ptr<LeadingAddJetSelection> addJet_selection;
+  std::unique_ptr<uhh2::Selection> ptW_sel;
 
   //histograms
   std::unique_ptr<BTagMCEfficiencyHists> hists_btag_eff, hists_btag_medium_eff, hists_subjet_btag_eff;
@@ -250,6 +251,8 @@ TTEfficiencyPostSelectionModule::TTEfficiencyPostSelectionModule(Context & ctx){
   //additional selections
   //===========================
 
+  ptW_sel.reset(new PtWSelection(250.)); /// just used comaprisons to the old pythia tune
+
   massDiff_selection.reset( new MassDiffSelection() );
   dphi_selection.reset(new DPhiMuBSelection( CSVBTag(CSVBTag::WP_MEDIUM), 1.2));
   addJet_selection.reset(new LeadingAddJetSelection( CSVBTag(CSVBTag::WP_MEDIUM), 50));
@@ -378,13 +381,18 @@ bool TTEfficiencyPostSelectionModule::process(Event & event) {
   //========================================
   //corrections, reweighting, scale factors
   //========================================
- 
+
   //run corrections
   bool ok = common->process(event);
   if(!ok) return false;
 
+
+  //if(!ptW_sel->passes(event)) return false; // uncomment for comparisons with the old pythia tune
+
+  //reject events with 
+  if(isMC && (event.genInfo->pileup_TrueNumInteractions() < 10 || event.genInfo->pileup_TrueNumInteractions() > 75)) return false;
+
   topjet_cleaner->process(event);
-  // topjet_corr->process(event);
 
   //apply top pt reweighting
   for (auto & rew : reweighting_modules) {
