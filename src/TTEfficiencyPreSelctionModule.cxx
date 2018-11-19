@@ -13,7 +13,7 @@
 //#include <UHH2/common/include/JetCorrections.h>
 #include <UHH2/common/include/ObjectIdUtils.h>
 #include <UHH2/common/include/MuonIds.h>
-//#include <UHH2/common/include/ElectronIds.h>
+#include <UHH2/common/include/ElectronIds.h>
 #include <UHH2/common/include/JetIds.h>
 #include "UHH2/common/include/NSelections.h"
 #include "UHH2/common/include/TriggerSelection.h"
@@ -58,10 +58,12 @@ TTEfficiencyPreSelectionModule::TTEfficiencyPreSelectionModule(Context & ctx){
 
   // MuonId muid = AndId<Muon>(MuonIDTight(), PtEtaCut(45., 2.4));
   MuonId muid = AndId<Muon>(MuonIDTight(), PtEtaCut(55., 2.4));
+  ElectronId eleid = AndId<Electron>(ElectronID_Spring16_medium_noIso, PtEtaCut(55., 2.4));
 
   common.reset(new CommonModules());
 
   common->set_muon_id(muid);
+  common->set_electron_id(eleid);
 
   common->switch_jetlepcleaner(true);
   common->switch_jetPtSorter();

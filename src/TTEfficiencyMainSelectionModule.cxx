@@ -95,7 +95,10 @@ TTEfficiencyMainSelectionModule::TTEfficiencyMainSelectionModule(Context & ctx){
 
   version = ctx.get("dataset_version", "");
 
-  string merged = ctx.get("MergedSelection", "<not set>");
+
+  bool TopPtReweighting = false;
+  TopPtReweighting = (ctx.get("TopPtReweight","FALSE")== "TRUE");
+
 
   //=============================
   // IDs and corrections
@@ -103,6 +106,7 @@ TTEfficiencyMainSelectionModule::TTEfficiencyMainSelectionModule(Context & ctx){
 
   // MuonId muid = AndId<Muon>(MuonIDTight(), MuonIso(0.15), Muon_dxydzCut(0.2, 0.5), PtEtaCut(45., 2.4));
   MuonId muid = AndId<Muon>(MuonIDTight(), PtEtaCut(55., 2.4));
+  ElectronId eleid = AndId<Electron>(ElectronID_Spring16_medium_noIso, PtEtaCut(55., 2.4));
 
   JetId jetid = AndId<Jet>(JetPFID(JetPFID::WP_LOOSE), PtEtaCut(30.0, 2.4));
 
@@ -113,7 +117,7 @@ TTEfficiencyMainSelectionModule::TTEfficiencyMainSelectionModule(Context & ctx){
   common.reset(new CommonModules());
   common->set_jet_id(jetid);
   common->set_muon_id(muid);
-  // common->set_electron_id(eleid);
+  common->set_electron_id(eleid);
   common->switch_jetlepcleaner(true);
   common->switch_jetPtSorter();
   common->switch_metcorrection();
@@ -157,7 +161,7 @@ TTEfficiencyMainSelectionModule::TTEfficiencyMainSelectionModule(Context & ctx){
   if (version == "TTbar_Incl" || version ==  "TTbar_700to1000" || version ==  "TTbar_1000toInf") {
     reweighting_modules.emplace_back(new TTbarGenProducer(ctx, "ttbargen", true));
     // reweighting_modules.emplace_back(new TopPtReweight(ctx, 0.156, -0.00137, "ttbargen", "weight_ttbar", true)); //8TeV
-    // reweighting_modules.emplace_back(new TopPtReweight(ctx, 0.0615, -0.0005, "ttbargen", "weight_ttbar", true)); //13TeV
+    if(TopPtReweighting) reweighting_modules.emplace_back(new TopPtReweight(ctx, 0.0615, -0.0005, "ttbargen", "weight_ttbar", true)); //13TeV
   }
 
   if (version == "TTbar_Incl" ) mttgen_sel.reset(new MttbarGenSelection(0., 700.));
@@ -165,10 +169,8 @@ TTEfficiencyMainSelectionModule::TTEfficiencyMainSelectionModule(Context & ctx){
   btagwAK8.reset(new MCBTagScaleFactor(ctx, CSVBTag::WP_MEDIUM, "jets","central","mujets","incl","MCBtagEfficiencies"));
   muo_tight_noniso_SF.reset(new MCMuonScaleFactor(ctx,"/nfs/dust/cms/user/dreyert/CMSSW_8_0_24_patch1/src/UHH2/common/data//MuonID_EfficienciesAndSF_average_RunBtoH.root","MC_NUM_TightID_DEN_genTracks_PAR_pt_eta",1, "tightID"));
   muo_trigger_SF.reset(new MCMuonScaleFactor(ctx,"/nfs/dust/cms/user/dreyert/CMSSW_8_0_24_patch1/src/UHH2/common/data//MuonTrigger_EfficienciesAndSF_average_RunBtoH.root","IsoMu50_OR_IsoTkMu50_PtEtaBins",1, "muonTrigger"));
-  // muo_trigger_SF.reset(new MCMuonScaleFactor(ctx,"/nfs/dust/cms/user/dreyert/CMSSW_8_0_24_patch1/src/UHH2/common/data//MuonTrigger_EfficienciesAndSF_average_RunBtoH.root","IsoMu24_OR_IsoTkMu24_PtEtaBins",1, "muonTrigger"));
  
-  
- 
+   
   //=============================
   //selections 
   //=============================
