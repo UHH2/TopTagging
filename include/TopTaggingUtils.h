@@ -81,37 +81,38 @@ bool GetLeadingBjetLepHem(const uhh2::Event &event, Jet &bjet, JetId btag);
 
 namespace JERFiles {
 
-  /*
-  extern const std::vector<std::string> JERFiles::Fall17_17Nov2017_V6_B_L123_AK4PFchs_DATA;
-  extern const std::vector<std::string> JERFiles::Fall17_17Nov2017_V6_C_L123_AK4PFchs_DATA;
-  extern const std::vector<std::string> JERFiles::Fall17_17Nov2017_V6_D_L123_AK4PFchs_DATA;
-  extern const std::vector<std::string> JERFiles::Fall17_17Nov2017_V6_E_L123_AK4PFchs_DATA;
-  extern const std::vector<std::string> JERFiles::Fall17_17Nov2017_V6_F_L123_AK4PFchs_DATA;
-  */
+ 
+  extern const std::vector<std::string> Fall17_17Nov2017_V8_B_L123_AK4PFchs_DATA;
+  extern const std::vector<std::string> Fall17_17Nov2017_V8_C_L123_AK4PFchs_DATA;
+  extern const std::vector<std::string> Fall17_17Nov2017_V8_D_L123_AK4PFchs_DATA;
+  extern const std::vector<std::string> Fall17_17Nov2017_V8_E_L123_AK4PFchs_DATA;
+  extern const std::vector<std::string> Fall17_17Nov2017_V8_F_L123_AK4PFchs_DATA;
+ 
   //AK4 Puppi
-  extern const std::vector<std::string> Fall17_17Nov2017_V6_B_L123_AK4PFPuppi_DATA;
-  extern const std::vector<std::string> Fall17_17Nov2017_V6_C_L123_AK4PFPuppi_DATA;
-  extern const std::vector<std::string> Fall17_17Nov2017_V6_D_L123_AK4PFPuppi_DATA;
-  extern const std::vector<std::string> Fall17_17Nov2017_V6_E_L123_AK4PFPuppi_DATA;
-  extern const std::vector<std::string> Fall17_17Nov2017_V6_F_L123_AK4PFPuppi_DATA;
+  extern const std::vector<std::string> Fall17_17Nov2017_V8_B_L123_AK4PFPuppi_DATA;
+  extern const std::vector<std::string> Fall17_17Nov2017_V8_C_L123_AK4PFPuppi_DATA;
+  extern const std::vector<std::string> Fall17_17Nov2017_V8_D_L123_AK4PFPuppi_DATA;
+  extern const std::vector<std::string> Fall17_17Nov2017_V8_E_L123_AK4PFPuppi_DATA;
+  extern const std::vector<std::string> Fall17_17Nov2017_V8_F_L123_AK4PFPuppi_DATA;
   
   //AK8
-  extern const std::vector<std::string> Fall17_17Nov2017_V6_B_L123_AK8PFchs_DATA;
-  extern const std::vector<std::string> Fall17_17Nov2017_V6_C_L123_AK8PFchs_DATA;
-  extern const std::vector<std::string> Fall17_17Nov2017_V6_D_L123_AK8PFchs_DATA;
-  extern const std::vector<std::string> Fall17_17Nov2017_V6_E_L123_AK8PFchs_DATA;
-  extern const std::vector<std::string> Fall17_17Nov2017_V6_F_L123_AK8PFchs_DATA;
+  extern const std::vector<std::string> Fall17_17Nov2017_V8_B_L123_AK8PFchs_DATA;
+  extern const std::vector<std::string> Fall17_17Nov2017_V8_C_L123_AK8PFchs_DATA;
+  extern const std::vector<std::string> Fall17_17Nov2017_V8_D_L123_AK8PFchs_DATA;
+  extern const std::vector<std::string> Fall17_17Nov2017_V8_E_L123_AK8PFchs_DATA;
+  extern const std::vector<std::string> Fall17_17Nov2017_V8_F_L123_AK8PFchs_DATA;
  
   //AK8 Puppi
-  extern const std::vector<std::string> Fall17_17Nov2017_V6_B_L123_AK8PFPuppi_DATA;
-  extern const std::vector<std::string> Fall17_17Nov2017_V6_C_L123_AK8PFPuppi_DATA;
-  extern const std::vector<std::string> Fall17_17Nov2017_V6_D_L123_AK8PFPuppi_DATA;
-  extern const std::vector<std::string> Fall17_17Nov2017_V6_E_L123_AK8PFPuppi_DATA;
-  extern const std::vector<std::string> Fall17_17Nov2017_V6_F_L123_AK8PFPuppi_DATA;
+  extern const std::vector<std::string> Fall17_17Nov2017_V8_B_L123_AK8PFPuppi_DATA;
+  extern const std::vector<std::string> Fall17_17Nov2017_V8_C_L123_AK8PFPuppi_DATA;
+  extern const std::vector<std::string> Fall17_17Nov2017_V8_D_L123_AK8PFPuppi_DATA;
+  extern const std::vector<std::string> Fall17_17Nov2017_V8_E_L123_AK8PFPuppi_DATA;
+  extern const std::vector<std::string> Fall17_17Nov2017_V8_F_L123_AK8PFPuppi_DATA;
 
-  extern const std::vector<std::string> Fall17_17Nov2017_V6_L123_AK4PFPuppi_MC;
-  extern const std::vector<std::string> Fall17_17Nov2017_V6_L123_AK8PFchs_MC;
-  extern const std::vector<std::string> Fall17_17Nov2017_V6_L123_AK8PFPuppi_MC;
+  extern const std::vector<std::string> Fall17_17Nov2017_V8_L123_AK4PFchs_MC;
+  extern const std::vector<std::string> Fall17_17Nov2017_V8_L123_AK4PFPuppi_MC;
+  extern const std::vector<std::string> Fall17_17Nov2017_V8_L123_AK8PFchs_MC;
+  extern const std::vector<std::string> Fall17_17Nov2017_V8_L123_AK8PFPuppi_MC;
 
   /*
   extern const std::vector<std::string> Summer16_23Sep2016_V4_BCD_L1RC_AK4PFchs_DATA;
