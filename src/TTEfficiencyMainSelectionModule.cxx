@@ -129,11 +129,9 @@ TTEfficiencyMainSelectionModule::TTEfficiencyMainSelectionModule(Context & ctx){
   // IDs
   //=============================
 
-  //MuonId muid = AndId<Muon>(MuonIDMedium_ICHEP(), PtEtaCut(50., 2.1));
    MuonId muid = AndId<Muon>(MuonID(Muon::CutBasedIdTight), PtEtaCut(55., 2.4));
-
-   ElectronId eleid = AndId<Electron>(ElectronID_Spring16_medium_noIso, PtEtaCut(55., 2.4));
-   // ElectronId eleid = AndId<Electron>(ElectronID_MVAGeneralPurpose_Spring16_tight, PtEtaCut(50., 2.1));
+   ElectronId eleid = AndId<Electron>(ElectronID_Fall17_medium_noIso, PtEtaCut(55., 2.4));
+ 
 
   JetId jetid = AndId<Jet>(JetPFID(JetPFID::WP_TIGHT), PtEtaCut(30.0, 2.4));
 
