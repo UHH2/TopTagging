@@ -126,32 +126,34 @@ class SFcalculation(object):
             fileIn = self.Infile_Mass_sys
             model = self.model_sys
      
-        
+        if pre_post is 'post':
         #get the data histogram
-        h_data = ROOT.TH1F()
-        fileIn.GetObject(observable+'_pass__DATA', h_data)
-        distr_DATA = distribution()
-        distr_DATA.set(h_data)
-        distr_MC = distribution()
+            h_data = ROOT.TH1F()
+            fileIn.GetObject(observable+'_pass__DATA', h_data)
+            distr_DATA = distribution()
+            distr_DATA.set(h_data)
 
-        MCset = False
-     
-        for p in model.get_processes(observable+'_pass'):
-            distr_pass = self.getDistribution(observable+'_pass' ,p, stat_sys, '_mass',  self.extra_mass_files)
+            eff_mass_post = efficiencyMass(distr_DATA, self.mass_min, self.mass_max)
+            return eff_mass_post
 
-            if not MCset:
-                distr_MC = deepcopy(distr_pass)
-                MCset = True
-            else:
-                distr_MC.add(distr_pass.name, distr_pass)
-
-        eff_mass_pre = efficiencyMass(distr_MC, self.mass_min, self.mass_max)
-        eff_mass_post = efficiencyMass(distr_DATA, self.mass_min, self.mass_max)
 
         if pre_post is 'pre':
+            distr_MC = distribution()
+
+            MCset = False
+     
+            for p in model.get_processes(observable+'_pass'):
+                print p
+                distr_pass = self.getDistribution(observable+'_pass' ,p, stat_sys, '_mass',  self.extra_mass_files)
+
+                if not MCset:
+                    distr_MC = deepcopy(distr_pass)
+                    MCset = True
+                else:
+                    distr_MC.add(distr_pass.name, distr_pass)
+
+            eff_mass_pre = efficiencyMass(distr_MC, self.mass_min, self.mass_max)
             return eff_mass_pre
-        if pre_post is 'post':
-            return eff_mass_post
 
     
     def calcEfficiencies(self, stat_sys):
@@ -172,6 +174,11 @@ class SFcalculation(object):
 
         for o in observables:
             d_obs = dict()
+
+            o_mass = o.replace('_pass','')
+            eff_mass_pre = self.calcMassEff(o_mass, 'pre', stat_sys)
+            eff_mass_post = self.calcMassEff(o_mass, 'post', stat_sys)
+
             for p in model.get_processes(o):
 
                 #read histograms
@@ -197,8 +204,8 @@ class SFcalculation(object):
                 eff_pre = efficiency(d_pass, d_fail) 
                 eff_post = efficiency(d_pass_post, d_fail_post)
    
-                eff_mass_pre = self.calcMassEff(o, 'pre', stat_sys)
-                eff_mass_post = self.calcMassEff(o, 'post', stat_sys)
+ #               eff_mass_pre = self.calcMassEff(o, 'pre', stat_sys)
+ #               eff_mass_post = self.calcMassEff(o, 'post', stat_sys)
  
                 eff_tot_pre = deepcopy(eff_pre)
                 eff_tot_pre.add(eff_mass_pre)
