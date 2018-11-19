@@ -161,8 +161,8 @@ TTEfficiencyPostSelectionModule::TTEfficiencyPostSelectionModule(Context & ctx){
   string PS_variation = "central";
   PS_variation = ctx.get("PS_variation", "central");
 
-  //  bool TopPtReweighting = false;
-  // TopPtReweighting = (ctx.get("TopPtReweight","FALSE")== "TRUE");
+  bool TopPtReweighting = false;
+  TopPtReweighting = (ctx.get("TopPtReweight","FALSE")== "TRUE");
 
 
   //===========================
@@ -189,22 +189,21 @@ TTEfficiencyPostSelectionModule::TTEfficiencyPostSelectionModule(Context & ctx){
   if ( vers.Contains("TTT") ) {
     reweighting_modules.emplace_back(new TTbarGenProducer(ctx, "ttbargen", true));
     // reweighting_modules.emplace_back(new TopPtReweight(ctx, 0.156, -0.00137, "ttbargen", "weight_ttbar", true)); //8TeV
-    //if(TopPtReweighting) reweighting_modules.emplace_back(new TopPtReweight(ctx, 0.0615, -0.0005, "ttbargen", "weight_ttbar", true)); //13TeV
+    if(TopPtReweighting) reweighting_modules.emplace_back(new TopPtReweight(ctx, 0.0615, -0.0005, "ttbargen", "weight_ttbar", true)); //13TeV
   }
 
   ps_weights.reset(new PartonShowerWeight(ctx, PS_variation));
 
   btagwAK8.reset(new MCBTagScaleFactor(ctx, CSVBTag::WP_MEDIUM, DeepCSVBTag(DeepCSVBTag::WP_MEDIUM), "jets", BTag_variation,"comb","incl","MCBtagEfficiencies"));
 
-  subjet_btagwAK8.reset(new MCBTagScaleFactor(ctx, CSVBTag::WP_LOOSE, DeepCSVBTag(DeepCSVBTag::WP_LOOSE), "topjets",BTag_variation,"lt","incl","MCSubjetBtagEfficiencies","", "SubjetBTagCalibration"));
-  subjet_btagwAK8_300to400.reset(new MCBTagScaleFactor(ctx, CSVBTag::WP_LOOSE, DeepCSVBTag(DeepCSVBTag::WP_LOOSE), "topjets",BTag_variation,"lt","incl","MCSubjetBtagEfficiencies_300to400","", "SubjetBTagCalibration"));
-  subjet_btagwAK8_400to480.reset(new MCBTagScaleFactor(ctx, CSVBTag::WP_LOOSE, DeepCSVBTag(DeepCSVBTag::WP_LOOSE), "topjets",BTag_variation,"lt","incl","MCSubjetBtagEfficiencies_400to480","", "SubjetBTagCalibration"));
-  subjet_btagwAK8_480to600.reset(new MCBTagScaleFactor(ctx, CSVBTag::WP_LOOSE, DeepCSVBTag(DeepCSVBTag::WP_LOOSE), "topjets",BTag_variation,"lt","incl","MCSubjetBtagEfficiencies_480to600","", "SubjetBTagCalibration"));
-  subjet_btagwAK8_600.reset(new MCBTagScaleFactor(ctx, CSVBTag::WP_LOOSE, DeepCSVBTag(DeepCSVBTag::WP_LOOSE), "topjets",BTag_variation,"lt","incl","MCSubjetBtagEfficiencies_600","", "SubjetBTagCalibration"));
+  //subjet_btagwAK8.reset(new MCBTagScaleFactor(ctx, CSVBTag::WP_LOOSE, DeepCSVBTag(DeepCSVBTag::WP_LOOSE), "topjets",BTag_variation,"lt","incl","MCSubjetBtagEfficiencies","", "SubjetBTagCalibration"));
+  // subjet_btagwAK8_300to400.reset(new MCBTagScaleFactor(ctx, CSVBTag::WP_LOOSE, DeepCSVBTag(DeepCSVBTag::WP_LOOSE), "topjets",BTag_variation,"lt","incl","MCSubjetBtagEfficiencies_300to400","", "SubjetBTagCalibration"));
+  //subjet_btagwAK8_400to480.reset(new MCBTagScaleFactor(ctx, CSVBTag::WP_LOOSE, DeepCSVBTag(DeepCSVBTag::WP_LOOSE), "topjets",BTag_variation,"lt","incl","MCSubjetBtagEfficiencies_400to480","", "SubjetBTagCalibration"));
+  //subjet_btagwAK8_480to600.reset(new MCBTagScaleFactor(ctx, CSVBTag::WP_LOOSE, DeepCSVBTag(DeepCSVBTag::WP_LOOSE), "topjets",BTag_variation,"lt","incl","MCSubjetBtagEfficiencies_480to600","", "SubjetBTagCalibration"));
+  //subjet_btagwAK8_600.reset(new MCBTagScaleFactor(ctx, CSVBTag::WP_LOOSE, DeepCSVBTag(DeepCSVBTag::WP_LOOSE), "topjets",BTag_variation,"lt","incl","MCSubjetBtagEfficiencies_600","", "SubjetBTagCalibration"));
 
-  muo_tight_SF.reset(new MCMuonScaleFactor(ctx,"/nfs/dust/cms/user/dreyert/CMSSW_Moriond18/CMSSW_9_4_1/src/UHH2/common/data/MuonID_94X_RunBCDEF_SF_ID.root","NUM_TightID_DEN_genTracks",0., "tightID", false, MuonID_variation));
-  cout << "muonID done" << endl;
-  muo_trigger_SF.reset(new MCMuonScaleFactor(ctx,"/nfs/dust/cms/user/dreyert/CMSSW_Moriond18/CMSSW_9_4_1/src/UHH2/common/data/MuonTrigger_EfficienciesAndSF_RunBtoF_Nov17Nov2017.root","Mu50_PtEtaBins",0., "muonTrigger", false, MuonTrigger_variation));
+  muo_tight_SF.reset(new MCMuonScaleFactor(ctx,"/nfs/dust/cms/user/dreyert/Analysis94X_v1/CMSSW_9_4_1/src/UHH2/common/data/MuonID_94X_RunBCDEF_SF_ID.root","NUM_TightID_DEN_genTracks_pt_abseta",0., "tightID", true, MuonID_variation));
+  muo_trigger_SF.reset(new MCMuonScaleFactor(ctx,"/nfs/dust/cms/user/dreyert/Analysis94X_v1/CMSSW_9_4_1/src/UHH2/common/data/MuonTrigger_EfficienciesAndSF_RunBtoF_Nov17Nov2017.root","Mu50_PtEtaBins",0., "muonTrigger", false, MuonTrigger_variation));
  
   scale_variation.reset(new MCScaleVariation(ctx));
 
@@ -639,10 +638,10 @@ bool TTEfficiencyPostSelectionModule::process(Event & event) {
   */
   //subjet_btagwAK8->process(event);
 
-  if(probejet_pt > 300 && probejet_pt < 400 ) subjet_btagwAK8_300to400->process(event);
-  if(probejet_pt >= 400 && probejet_pt < 480 ) subjet_btagwAK8_400to480->process(event);
-  if(probejet_pt >= 480 && probejet_pt < 600 ) subjet_btagwAK8_480to600->process(event);
-  if(probejet_pt >= 600 ) subjet_btagwAK8_600->process(event);
+  // if(probejet_pt > 300 && probejet_pt < 400 ) subjet_btagwAK8_300to400->process(event);
+  // if(probejet_pt >= 400 && probejet_pt < 480 ) subjet_btagwAK8_400to480->process(event);
+  // if(probejet_pt >= 480 && probejet_pt < 600 ) subjet_btagwAK8_480to600->process(event);
+  // if(probejet_pt >= 600 ) subjet_btagwAK8_600->process(event);
 
  
   for(unsigned int bin = 0; bin < pt_bins.size(); ++bin){
