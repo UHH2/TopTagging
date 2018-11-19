@@ -25,7 +25,7 @@ bool DijetSelection::passes(const Event & event){
     return third_jet_frac < third_frac_max;
 }
 
-HTCut::HTCut(float minHT_, float maxHT_):
+/*HTCut::HTCut(float minHT_, float maxHT_):
   minHT(minHT_), maxHT(maxHT_){}
 
 bool HTCut::passes(const Event& event){
@@ -37,7 +37,16 @@ bool HTCut::passes(const Event& event){
   if(ht > minHT && ht < maxHT) return true;
   return false;
 }
+*/
 
+HTCut::HTCut(uhh2::Context& ctx, float minHT_, float maxHT_):
+  minHT(minHT_), maxHT(maxHT_){ h_ht = ctx.get_handle<double>("HT"); }
+
+bool HTCut::passes(const Event& event){
+  double ht = event.get(h_ht);
+  if(ht > minHT && ht < maxHT) return true;
+  return false;
+}
 
 PtWSelection::PtWSelection(double minPt_, double maxPt_):
   minPt(minPt_), maxPt(maxPt_){}

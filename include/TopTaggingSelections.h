@@ -32,12 +32,12 @@ private:
 
 class HTCut: public uhh2::Selection {
  public:
-  explicit HTCut(float minHT_, float maxHT_ = uhh2::infinity);
+  explicit HTCut(uhh2::Context& ctx, float minHT_, float maxHT_ = uhh2::infinity);
   virtual bool passes(const uhh2::Event&) override;
 
  private:
   float minHT, maxHT;
-
+  uhh2::Event::Handle<double> h_ht;
 };
 
 class PtWSelection: public uhh2::Selection {
