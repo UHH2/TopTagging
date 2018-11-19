@@ -39,8 +39,8 @@ private:
   std::unique_ptr<JetCleaner> jet_cleaner;
 
   //selections
-  // std::unique_ptr<uhh2::Selection> muon_sel, pv_sel, jet_sel;
-  std::unique_ptr<uhh2::Selection> htlep_sel, met_sel;
+  //std::unique_ptr<uhh2::Selection> htlep_sel, met_sel;
+  std::unique_ptr<uhh2::Selection> met_sel, ptW_sel;
   std::unique_ptr<AndSelection> pre_selection;
 
   //histograms
@@ -76,7 +76,8 @@ TTEfficiencyPreSelectionModule::TTEfficiencyPreSelectionModule(Context & ctx){
 
   //selections
   met_sel.reset(new METCut(20., std::numeric_limits<double>::infinity()));
-  htlep_sel.reset(new HTlepCut(70., std::numeric_limits<double>::infinity()));
+  ptW_sel.reset(new PtWSelection(100.));
+  //htlep_sel.reset(new HTlepCut(70., std::numeric_limits<double>::infinity()));
  
   pre_selection.reset(new AndSelection(ctx,"first selection"));  
   pre_selection->add<NMuonSelection>("Number of muons == 1",1,1);
@@ -133,8 +134,9 @@ bool TTEfficiencyPreSelectionModule::process(Event & event) {
   //apply selections
   if(!pre_selection->passes(event)) return false;
   if(!met_sel->passes(event)) return false;
-  if(!htlep_sel->passes(event)) return false;
- 
+  //  if(!htlep_sel->passes(event)) return false;
+  if(!ptW_sel->passes(event)) return false;
+
   // store uncleaned jets and MET
   event.jets->clear();
   event.jets->reserve(uncleaned_jets->size());
