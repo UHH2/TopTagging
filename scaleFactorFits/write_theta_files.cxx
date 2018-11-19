@@ -2,7 +2,7 @@
 void norm(TH1F* h_sys, TFile* f_nom, TFile* f_sys, TString name);
 void scaleShape( TH1F* h_shape, TH1F* h_nom, double scale = 1.);
 double getTTbarScale(TFile *dataFile, std::vector<std::vector<TFile*>> MCFiles, TString dirName, TString histName); 
-vector<TH1F*> GetPDFVariations(TFile* f_PDF, TFile* f_nominal, TString in_name, TString out_name, bool rebin);
+vector<TH1F*> GetPDFVariations(TFile* f_PDF, TFile* f_nominal, TString in_name, TString out_name, bool rebin, bool mass_binning, double* bins_mass, int Nbins_mass);
 TH1F* calcPDFunc(std::vector<TH1F*> PDFhists, TH1F *h_nominal);
 void write_symmetric_uncertainty(TH1F *hist, TH1F* h_nominal, TFile* outputFile);
 
@@ -64,19 +64,31 @@ void write_theta_files(){
   
   std::vector<bool> ttbarscaling  = {true, false};
 
-  //std::vector<TString> JetCollections = {"PUPPI", "CHS"};
-
-  //std::vector<TString> JetCollections = {"PUPPI"};
-  std::vector<TString> JetCollections = {"HOTVR"};
+  std::vector<TString> JetCollections = {"PUPPI"};
+  //std::vector<TString> JetCollections = {"HOTVR"};
+  // std::vector<TString> JetCollections = {"CHS"};
 
   std::vector<TString> vPassFail = {"pass", "fail"};
 
   double bins_pt[] = {300, 400, 440, 480, 520, 560, 600,640,680,720,760,800,840,880,920,960,1000,1060,1120,1180,1260, 1340, 1420, 1500, 1600, 1800};
   int Nbins_pt = sizeof(bins_pt)/sizeof(*bins_pt)-1;
+  
+  double bin = 100; 
+  for(unsigned int b = 0; b<100; ++b){
+    if(bin > 500) break;
+    cout << bin <<", ";
+    bin += 0.1*bin;
+  }
+  cout << endl;
+
+  bool mass_bins = true;
+  //double bins_mass[] = {0,10,20,30,40,50,60,70,80,90,100, 110, 120, 130, 145, 160, 175, 190, 210, 235, 270, 310, 350, 390, 450, 500};
+  double bins_mass[] = {0,10,25,40,55,70,85,100, 115, 130, 145, 160, 175, 190, 210, 235, 270, 310, 350, 390, 450, 500};
+  int Nbins_mass = sizeof(bins_mass)/sizeof(*bins_mass)-1;
 
   bool separate = false;
 
-  bool normalizeSYS = true;
+  bool normalizeSYS = true;//!!!!!!!!!!!!!!
 
 
   //================
@@ -196,6 +208,7 @@ void write_theta_files(){
 		  h_data->SetName(categoryName+"DATA");
  		  if(rebin){
 		    if(variable == "pt")  h_data = (TH1F*)h_data->Rebin(Nbins_pt,h_data->GetName(),bins_pt);
+		    else if(variable == "mass_sub" && mass_bins) h_data = (TH1F*)h_data->Rebin(Nbins_mass,h_data->GetName(),bins_mass);
 		    else h_data->Rebin(2);
 		  }
 		  outputFile->cd();
@@ -225,14 +238,15 @@ void write_theta_files(){
 
 		      TString MCName = MCFiles.at(i).at(j)->GetName();
 
-		      cout <<  MCName << endl;
+		      //cout <<  MCName << endl;
 
 		      TH1F* hist_file;
 		      MCFiles.at(i).at(j)->GetObject(dirName+"/"+histName, hist_file);
 		      TH1F* hist = (TH1F*)hist_file->Clone(categoryName+MCName);
 
 		      if(rebin){
-			if(variable == "pt")  hist = (TH1F*)hist->Rebin(Nbins_pt,hist->GetName(),bins_pt);
+			if(variable == "pt") hist = (TH1F*)hist->Rebin(Nbins_pt,hist->GetName(),bins_pt);
+			else if(variable == "mass_sub" && mass_bins) hist = (TH1F*)hist->Rebin(Nbins_mass,hist->GetName(),bins_mass);
 			else hist->Rebin(2);
 		      }
 
@@ -276,7 +290,7 @@ void write_theta_files(){
 		    
 		      //get PDF histogram
 		      TString inNamePDF = dirName+"/"+histName;
-		      std::vector<TH1F*> PDFhists = GetPDFVariations(PDFFiles.at(i), MCFiles.at(i).at(0), inNamePDF, categoryName+TTbarName, rebin);
+		      std::vector<TH1F*> PDFhists = GetPDFVariations(PDFFiles.at(i), MCFiles.at(i).at(0), inNamePDF, categoryName+TTbarName, rebin, mass_bins,  bins_mass, Nbins_mass);
 		      
 		      TString inNamePDF_extra = inNamePDF.Copy();
 		      bool extraPDFFile = false; 
@@ -288,7 +302,7 @@ void write_theta_files(){
 			inNamePDF_extra.ReplaceAll("fail", "pass");
 			extraPDFFile = true;
 		      }
-		      std::vector<TH1F*> PDFhists_extra = GetPDFVariations(PDFFiles.at(i), MCFiles.at(i).at(0), inNamePDF_extra, categoryName+TTbarName, rebin);
+		      std::vector<TH1F*> PDFhists_extra = GetPDFVariations(PDFFiles.at(i), MCFiles.at(i).at(0), inNamePDF_extra, categoryName+TTbarName, rebin,  mass_bins,  bins_mass, Nbins_mass);
 		      
 		      outputFile->cd(); 
 		      for(unsigned int var = 0; var < 2; ++var){
@@ -411,20 +425,28 @@ double getTTbarScale(TFile* dataFile, std::vector<std::vector<TFile*>> MCFiles, 
   return scale;
 }
 
-vector<TH1F*> GetPDFVariations(TFile* f_PDF, TFile* f_nominal, TString in_name, TString out_name, bool rebin){
+vector<TH1F*> GetPDFVariations(TFile* f_PDF, TFile* f_nominal, TString in_name, TString out_name, bool rebin, bool mass_binning, double* bins_mass, int Nbins_mass){
  
   std::vector<TH1F*> PDFhists;
+
+
 
   TH1F* h_nominal_FILE;
   f_nominal->GetObject(in_name, h_nominal_FILE);
   TH1F* h_nominal = (TH1F*) h_nominal_FILE->Clone("h_nominalPDF");
-  if(rebin) h_nominal->Rebin(2); 
+  if(rebin){
+    if(mass_binning) h_nominal = (TH1F*)h_nominal->Rebin(Nbins_mass,h_nominal->GetName(),bins_mass);
+    else h_nominal->Rebin(2);
+  } 
     
   for(unsigned int k = 0; k < 100; ++k){
     TH1F* h_PDF1;
     f_PDF->GetObject(in_name+"_PDF_"+std::to_string(k), h_PDF1);
     TH1F* h_PDF = (TH1F*)h_PDF1->Clone("h_PDF");
-    if(rebin) h_PDF->Rebin(2);
+    if(rebin){
+      if(mass_binning) h_PDF = (TH1F*)h_PDF->Rebin(Nbins_mass,h_PDF->GetName(),bins_mass);
+      else h_PDF->Rebin(2);
+    }
     PDFhists.emplace_back(h_PDF);
   }
 		      
