@@ -12,17 +12,15 @@ void write_theta_files(){
   //steering options
   //===========================
  
-  TString InputPathPUPPI = "/nfs/dust/cms/user/dreyert/RunII_HeavyResonance/PostSelection/CMSTopTaggerPuppi_NoIso/";
-  //TString InputPathPUPPI = "/nfs/dust/cms/user/dreyert/RunII_HeavyResonance/PostSelection/CMSTopTaggerPuppi/";
-  TString InputPathCHS = "/nfs/dust/cms/user/dreyert/RunII_80X_Moriond17/PostSelection/AK8CHS/new_data2/";
-  // TString InputPathHOTVR = "/nfs/dust/cms/user/dreyert/RunII_80X_Moriond17/PostSelection/HOTVR/newMatching/";
-  TString InputPathHOTVR = "/nfs/dust/cms/user/dreyert/RunII_HeavyResonance/PostSelection/HOTVR_PUPPI_NoIso/";
+
+  TString InputPathPUPPI = "/nfs/dust/cms/user/dreyert/RunII_HeavyResonance/PostSelection_aug18/AK8_PUPPI/";
+  TString InputPathCHS =   "/nfs/dust/cms/user/dreyert/RunII_HeavyResonance/PostSelection_aug18/AK8_CHS/";
+  TString InputPathHOTVR = "/nfs/dust/cms/user/dreyert/RunII_HeavyResonance/PostSelection_aug18/HOTVR_PUPPI/";
   TString OutputPath = "./";
 
   TString PDF_dir = "fill_PDF_TRUE";
 
-  //std::vector<TString> MCNames {"TTbar_mergedTop", "TTbar_semimerged", "TTbar_notmerged", "QCD", "DYJets", "ST", "WJets"};
-  std::vector<TString> MCNames {"TTbar_mergedTop", "TTbar_semimerged", "TTbar_notmerged", "QCD", "ST", "WJets"};
+  std::vector<TString> MCNames {"TTbar_mergedTop", "TTbar_semimerged", "TTbar_notmerged", "QCD", "DYJets", "ST", "WJets"};
  
   std::vector< vector<TString> > systematics {
     {"Btag_bc__plus", "BTag_variation_up_bc"}, {"Btag_udsg__plus", "BTag_variation_up_udsg"}, 
@@ -35,39 +33,29 @@ void write_theta_files(){
     {"JEC__plus", "jecsmear_direction_up"}, {"JEC__minus", "jecsmear_direction_down"}, 
     {"JER__plus", "jersmear_direction_up"}, {"JER__minus", "jersmear_direction_down"}};
 
-  std::vector< vector<TString> > model_systematics {//};
-   {"generator", "aMCatNLO"},
+  std::vector< vector<TString> > model_systematics {
+    //{"generator", "aMCatNLO"},
    {"shower_model","Herwig"}};
 
   std::vector< vector<TString> > observables {
-    //{"ProbeJet_pt400_WPXXX_PASSFAIL", "Mass_PASSFAIL__", "400_PASSFAIL"},
+    //{"ProbeJet_pt400_WPXXX_PASSFAIL", "Mass_PASSFAIL__", "400_PASSFAIL"}};
     {"ProbeJet_pt300to400_WPXXX_PASSFAIL", "Mass_PASSFAIL__", "300to400_PASSFAIL"},
     {"ProbeJet_pt400to480_WPXXX_PASSFAIL", "Mass_PASSFAIL__", "400to480_PASSFAIL"}, 
     {"ProbeJet_pt480to600_WPXXX_PASSFAIL", "Mass_PASSFAIL__", "480to600_PASSFAIL"}, 
     {"ProbeJet_pt600_WPXXX_PASSFAIL", "Mass_PASSFAIL__",  "600_PASSFAIL"}};
  
-  // std::vector<TString> wps {"", "wp1","wp2", "wp3", "wp4", "wp5", "wp1_btag","wp2_btag", "wp3_btag", "wp4_btag", "wp5_btag"};
-  //std::vector<TString> wps {"wp1"};
-  // std::vector<TString> wps {"wp2"};
-  /// std::vector<TString> wps {"wp1_mass_btag","wp2_mass_btag", "wp3_mass_btag", "wp4_mass_btag", "wp5_mass_btag"};
-  std::vector<TString> wps { ""};
+  std::vector<TString> wps {"", "wp1","wp2", "wp3", "wp4", "wp5", "wp1_btag","wp2_btag", "wp3_btag", "wp4_btag", "wp5_btag"};
 
-  //std::vector<TString> variables = { "pt", "tau32"};
-
-  std::vector<TString> variables = {"mass_sub"};
-  //std::vector<TString> variables = {"tau32"};
+  std::vector<TString> variables = {"mass_sub", "tau32"};
   
   std::vector<bool> rebinning = {true, false};
 
   std::vector<TString> statsys = {"stat", "sys"};
-  //std::vector<TString> statsys = {"stat"};
   
   std::vector<bool> ttbarscaling  = {true, false};
 
-  std::vector<TString> JetCollections = {"PUPPI"};
-  //std::vector<TString> JetCollections = {"HOTVR"};
-  // std::vector<TString> JetCollections = {"CHS"};
-
+  std::vector<TString> JetCollections = {"PUPPI", "CHS", "HOTVR"};
+ 
   std::vector<TString> vPassFail = {"pass", "fail"};
 
   double bins_pt[] = {300, 400, 440, 480, 520, 560, 600,640,680,720,760,800,840,880,920,960,1000,1060,1120,1180,1260, 1340, 1420, 1500, 1600, 1800};
@@ -82,13 +70,12 @@ void write_theta_files(){
   cout << endl;
 
   bool mass_bins = true;
-  //double bins_mass[] = {0,10,20,30,40,50,60,70,80,90,100, 110, 120, 130, 145, 160, 175, 190, 210, 235, 270, 310, 350, 390, 450, 500};
   double bins_mass[] = {0,10,25,40,55,70,85,100, 115, 130, 145, 160, 175, 190, 210, 235, 270, 310, 350, 390, 450, 500};
   int Nbins_mass = sizeof(bins_mass)/sizeof(*bins_mass)-1;
 
   bool separate = false;
 
-  bool normalizeSYS = true;//!!!!!!!!!!!!!!
+  bool normalizeSYS = true;
 
 
   //================
@@ -124,21 +111,12 @@ void write_theta_files(){
       if(MCName.Contains("TTbar")){
 	for(const auto & model_systematic: model_systematics){
 	  TFile* file = new TFile(Path+model_systematic.at(1)+"/uhh2.AnalysisModuleRunner.MC."+MCName+".root","READ");
-	  cout <<Path+model_systematic.at(1)+"/uhh2.AnalysisModuleRunner.MC."+MCName+".root" << endl;
 	  file->SetName(MCName+"__"+model_systematic.at(0));
-	  //file->SetName(MCName+"_"+model_systematic.at(0));
 	  vFiles.emplace_back(file);
 	}
       }
       MCFiles.emplace_back(vFiles);
 
-      /*     std::vector<TFile*> vFiles_model;
-	     for(const auto & model_systematic: model_systematics){
-	     TFile* file = new TFile(Path+model_systematic.at(1)+"/uhh2.AnalysisModuleRunner.MC."+MCName+".root","READ");
-	     file->SetName(MCName+"_"+model_systematic.at(0));
-	     }
-	     modelFiles.emplace_back(vFiles_model);
-      */
       if(MCName.Contains("TTbar")){
 	TFile* PDFFile = new TFile(Path+PDF_dir+"/uhh2.AnalysisModuleRunner.MC."+MCName+".root" , "READ");
 	PDFFile->SetName(MCName+"_PDF");
@@ -150,7 +128,7 @@ void write_theta_files(){
     //=========================================================
     //loop over different variables, working points and pt bins
     //=========================================================
-
+    cout << "start loops" <<endl;
     for(const auto & variable: variables){
       for(const auto & Statsys: statsys){
 	for(const auto & rebin: rebinning){
@@ -172,9 +150,9 @@ void write_theta_files(){
 		  TString binName =  observables.at(bin).at(2);
 		  binName.ReplaceAll("_PASSFAIL", "");
 		  
-		  //TString outName = "thetaFilesTest/"+variable+"/"+fine+"thetaFile_"+binName+"_"+JetCollection+"_"+Statsys+"_"+wp+scaled+".root";
-		  TString outName = "thetaFilesNewSYS/"+variable+"/"+fine+"thetaFile_"+binName+"_"+JetCollection+"_"+Statsys+"_"+wp+"_modelUnc"+scaled+".root";
+		  TString outName = "thetaFiles_Rebin/"+variable+"/"+fine+"thetaFile_"+binName+"_"+JetCollection+"_"+Statsys+"_"+wp+scaled+".root";
 		  outputFile = new TFile(outName,"RECREATE");
+		  cout << outName << endl;
 		}
 
 		for( const auto & passFail: vPassFail){
@@ -183,8 +161,6 @@ void write_theta_files(){
 		  // more naming
 		  //===================================
 		  if(JetCollection != "HOTVR" && wp == "" && passFail == "fail") continue;
-
-		  cout << passFail << endl;
 		
 		  TString dirName = observables.at(bin).at(0);
 		  if(wp.Contains("btag")) dirName.ReplaceAll("WPXXX",wp);
@@ -196,9 +172,6 @@ void write_theta_files(){
 		  categoryName.ReplaceAll("PASSFAIL", passFail);
 
 		  TString histName = variable;
-		  /* if(JetCollection == "HOTVR" && variable == "mass_sub") {
-		    histName = "mass";
-		    }*/
 		
 		  //=======================
 		  //get data histogram
@@ -219,8 +192,6 @@ void write_theta_files(){
 		  //======================
 		  double scale = 1.;
 		  if (scaleTTbar){
-		    // if(JetCollection == "HOTVR") scale = getTTbarScale(dataFile, MCFiles, dirName, "mass");
-		    // else 
 		    scale = getTTbarScale(dataFile, MCFiles, dirName, "mass_sub");
 		  }
 
@@ -486,30 +457,18 @@ TH1F* calcPDFunc(std::vector<TH1F*> PDFhists, TH1F* h_nominal){
 }
 
 void write_symmetric_uncertainty(TH1F *hist, TH1F* h_nominal, TFile* outputFile){
-
-  cout << "start" << endl;
   
   TString histName = hist->GetName();
-  cout << h_nominal->GetName() << endl;
 
-
-  cout << "clone hists" << endl;
   TH1F* hist_up = (TH1F*)hist->Clone(histName+"__plus");
   // TH1F* hist_up = (TH1F*)hist->Clone(histName);
   TH1F* hist_down = (TH1F*)h_nominal->Clone(histName+"__minus");
 
-  cout << "calc" << endl;
-
   TH1F* hist_diff = (TH1F*)hist->Clone(histName+"__diff"); 
   hist_diff->Add(h_nominal, -1.);
   hist_down->Add(hist_diff, -1.);
-
-  cout << "write hists" << endl;
  
   outputFile->cd();
   hist_up->Write();
   hist_down->Write();
-
-  cout << "DONE" << endl;
- 
 }
