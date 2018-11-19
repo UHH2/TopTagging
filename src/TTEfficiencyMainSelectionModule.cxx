@@ -53,12 +53,12 @@ private:
 
   //reweighting and scale factors
   std::vector<std::unique_ptr<AnalysisModule>> reweighting_modules;
-  std::unique_ptr<uhh2::AnalysisModule> muo_tight_noniso_SF, muo_trigger_SF;
+  std::unique_ptr<uhh2::AnalysisModule> muo_tight_SF, muo_trigger_SF;
   //std::unique_ptr<uhh2::AnalysisModule> muo_medium_noniso_SF;
   std::unique_ptr<AnalysisModule> btagwAK8, subjet_btagwAK8;
 
   //selections
-  std::unique_ptr<uhh2::Selection> topjet_sel, htlep_sel, trigger_sel,trigger_sel2,  met_sel, bjetCloseToLepton_sel, twoDcut, mttgen_sel;
+  std::unique_ptr<uhh2::Selection> topjet_sel, ptW_sel, trigger_sel,  met_sel, bjetCloseToLepton_sel, twoDcut;
 
   std::unique_ptr<AndSelection> first_selection;
 
@@ -222,8 +222,7 @@ TTEfficiencyMainSelectionModule::TTEfficiencyMainSelectionModule(Context & ctx){
 
   twoDcut.reset(new TwoDCut(.4, 25.));
   met_sel.reset(new METCut(50., std::numeric_limits<double>::infinity()));
-  htlep_sel.reset(new HTlepCut(150., std::numeric_limits<double>::infinity()));
-  // bjetCloseToLepton_sel.reset(new NMuonBTagSelection(1, 999, CSVBTag(CSVBTag::WP_MEDIUM) ));
+  ptW_sel.reset(new PtWSelection(150.));
   bjetCloseToLepton_sel.reset(new NMuonBTagSelection(1, 999, DeepCSVBTag(DeepCSVBTag::WP_MEDIUM) ));
  
   first_selection.reset(new AndSelection(ctx,"first selection"));  
@@ -327,20 +326,16 @@ bool TTEfficiencyMainSelectionModule::process(Event & event) {
   for(auto & h : hists_before_sel){
     h->fill(event);
   }
-  
+  // muo_trigger_SF->process(event);
 
   //======================================        
   //apply selections
   //======================================        
-  // if( !isMC && event.run < 274954) {
   if(!trigger_sel->passes(event)) return false;
-  // }else{
-  //  if( !(trigger_sel->passes(event) || trigger_sel2->passes(event)) ) return false;
-    //}
   if(!first_selection->passes(event)) return false; 
   if(!twoDcut->passes(event)) return false; 
   if(!met_sel->passes(event)) return false; 
-  if(!htlep_sel->passes(event)) return false; 
+  if(!ptW_sel->passes(event)) return false; 
   hists_btag_eff->fill(event);
   hists_btag_medium_eff->fill(event);
   if(!bjetCloseToLepton_sel->passes(event)) return false; 
