@@ -79,8 +79,6 @@ private:
   std::vector<std::vector<std::unique_ptr<ProbeJetHists>>> h_probe_all_pass, h_probe_mass_pass, h_probe_btag_pass, h_probe_mass_btag_pass;
   std::vector<std::vector<std::unique_ptr<ProbeJetHists>>> h_probe_all_fail, h_probe_mass_fail, h_probe_btag_fail, h_probe_mass_btag_fail;
 
-  //std::vector<std::vector<std::unique_ptr<ProbeJetHists>>>  h_probe_btag_NoSF_pass, h_probe_btag_NoSF_fail;
-
   std::vector<std::vector<std::unique_ptr<ProbeJetHists>>> h_probeNPV_all_pass, h_probeNPV_mass_pass, h_probeNPV_btag_pass, h_probeNPV_mass_btag_pass;
   std::vector<std::vector<std::unique_ptr<ProbeJetHists>>> h_probeNPV_all_fail, h_probeNPV_mass_fail, h_probeNPV_btag_fail, h_probeNPV_mass_btag_fail;
 
@@ -313,16 +311,11 @@ TTEfficiencyPostSelectionModule::TTEfficiencyPostSelectionModule(Context & ctx){
 
     for(unsigned int b = 0; b < wps.size(); ++b){
       h_probe_all_pass.at(bin).emplace_back(new ProbeJetHists(ctx, (name+"_"+ptString+wps.at(b)+"_all_pass").Data()));
-      // h_probe_mass_pass.at(bin).emplace_back(new ProbeJetHists(ctx, (name+"_"+ptString+wps.at(b)+"_mass_pass").Data()));
       h_probe_btag_pass.at(bin).emplace_back(new ProbeJetHists(ctx,  (name+"_"+ptString+wps.at(b)+"_btag_pass").Data()));
-      // h_probe_mass_btag_pass.at(bin).emplace_back(new ProbeJetHists(ctx,  (name+"_"+ptString+wps.at(b)+"_mass_btag_pass").Data()));
-      //    h_probe_btag_NoSF_pass.at(bin).emplace_back(new ProbeJetHists(ctx,  (name+"_"+ptString+wps.at(b)+"_mass_btag_NoSF_pass").Data()));
 
       h_probe_all_fail.at(bin).emplace_back(new ProbeJetHists(ctx, (name+"_"+ptString+wps.at(b)+"_all_fail").Data()));
-      // h_probe_mass_fail.at(bin).emplace_back(new ProbeJetHists(ctx, (name+"_"+ptString+wps.at(b)+"_mass_fail").Data()));
       h_probe_btag_fail.at(bin).emplace_back(new ProbeJetHists(ctx,  (name+"_"+ptString+wps.at(b)+"_btag_fail").Data()));
-      // h_probe_mass_btag_fail.at(bin).emplace_back(new ProbeJetHists(ctx,  (name+"_"+ptString+wps.at(b)+"_mass_btag_fail").Data()));
-      //  h_probe_btag_NoSF_fail.at(bin).emplace_back(new ProbeJetHists(ctx,  (name+"_"+ptString+wps.at(b)+"_mass_btag_NoSF_fail").Data()));
+    
     }  
   }
  
@@ -343,14 +336,10 @@ TTEfficiencyPostSelectionModule::TTEfficiencyPostSelectionModule(Context & ctx){
 
     for(unsigned int b = 0; b < wps.size(); ++b){
       h_probeNPV_all_pass.at(bin).emplace_back(new ProbeJetHists(ctx, (name+"_"+npvString+wps.at(b)+"_all_pass").Data()));
-      //  h_probeNPV_mass_pass.at(bin).emplace_back(new ProbeJetHists(ctx, (name+"_"+npvString+wps.at(b)+"_mass_pass").Data()));
       h_probeNPV_btag_pass.at(bin).emplace_back(new ProbeJetHists(ctx,  (name+"_"+npvString+wps.at(b)+"_btag_pass").Data()));
-      // h_probeNPV_mass_btag_pass.at(bin).emplace_back(new ProbeJetHists(ctx,  (name+"_"+npvString+wps.at(b)+"_mass_btag_pass").Data()));
 
       h_probeNPV_all_fail.at(bin).emplace_back(new ProbeJetHists(ctx, (name+"_"+npvString+wps.at(b)+"_all_fail").Data()));
-      //  h_probeNPV_mass_fail.at(bin).emplace_back(new ProbeJetHists(ctx, (name+"_"+npvString+wps.at(b)+"_mass_fail").Data()));
       h_probeNPV_btag_fail.at(bin).emplace_back(new ProbeJetHists(ctx,  (name+"_"+npvString+wps.at(b)+"_btag_fail").Data()));
-      // h_probeNPV_mass_btag_fail.at(bin).emplace_back(new ProbeJetHists(ctx,  (name+"_"+npvString+wps.at(b)+"_mass_btag_fail").Data()));
     }  
   }
  
@@ -473,30 +462,6 @@ bool TTEfficiencyPostSelectionModule::process(Event & event) {
   bool mass_cut = false;
   if(usePUPPI && probejet_mass > 105 && probejet_mass < 210) mass_cut = true;
   else if(!usePUPPI && probejet_mass > 105 && probejet_mass < 220) mass_cut = true;
-  
-  // std::vector<double> tau32_wps_CHS           {0.50, 0.57, 0.67, 0.81};
-  //std::vector<double> tau32_wps_PUPPI         {0.46, 0.54, 0.65, 0.80};
-
-  std::vector<double> tau32_wps_HTT_CHS       {0.49, 0.54, 0.65, 0.97, 0.98, 0.55, 0.62, 0.93, 0.97};
-  std::vector<double> fRec_wps_CHS            {0.14, 0.20, 0.25, 0.22, 0.50, 0.17, 0.27, 0.20, 0.47};
-  std::vector<double> tau32_wps_HTT_PUPPI     {0.39, 0.48, 0.60, 0.96, 0.98, 0.50, 0.60, 0.99, 0.97};
-  std::vector<double> fRec_wps_PUPPI          {0.36, 0.43, 0.22, 0.25, 0.48, 0.16, 0.25, 0.22, 0.46};
-
-  //  double fRec = 0;
-  //if(useHTT) fRec = probe_jet.get_tag( probe_jet.tagname2tag("fRec"));
-
-  // std::vector<double> tau32_wps; 
-  // std::vector<double> fRec_wps; 
-  // if(!useHTT && !usePUPPI) tau32_wps = tau32_wps_CHS;
-  //else if(!useHTT && usePUPPI) tau32_wps = tau32_wps_PUPPI;
-  //else if(useHTT && !usePUPPI) {
-  //  tau32_wps = tau32_wps_HTT_CHS; 
-  //  fRec_wps = fRec_wps_CHS;
-  //}
-  //else if(useHTT && usePUPPI) {
-  //  tau32_wps = tau32_wps_HTT_PUPPI; 
-  //  fRec_wps = fRec_wps_PUPPI;
-  //}
 
   if(probejet_mass < 10) return false; //mild mass cut on the denominator 
  
@@ -550,14 +515,7 @@ bool TTEfficiencyPostSelectionModule::process(Event & event) {
   std::vector<double> fRec_wps_new; 
   if(!useHTT && !usePUPPI) tau32_wps_new = tau32_wps_CHS_new;
   else if(!useHTT && usePUPPI) tau32_wps_new = tau32_wps_PUPPI_new;
-  else if(useHTT && !usePUPPI) {
-    tau32_wps_new = tau32_wps_HTT_CHS; 
-    fRec_wps_new = fRec_wps_CHS;
-  }
-  else if(useHTT && usePUPPI) {
-    tau32_wps_new = tau32_wps_HTT_PUPPI; 
-    fRec_wps_new = fRec_wps_PUPPI;
-  }
+
     
   for(unsigned int wp = 0; wp < tau32_wps_new.size(); ++wp){
   
@@ -615,19 +573,6 @@ bool TTEfficiencyPostSelectionModule::process(Event & event) {
     
   }
  
-  /*
- for(unsigned int bin = 0; bin < pt_bins.size(); ++bin){
-    for(unsigned int wp = 0; wp < tau32_wps_new.size(); ++wp){
-
-      bool pt_cut = get_pt_cut(bin, probejet_pt);
-      if(pt_cut){
-	if(toptag_btag.at(wp)) h_probe_btag_NoSF_pass.at(bin).at(wp)->fill_probe(event, probe_jet);
-	else h_probe_btag_NoSF_fail.at(bin).at(wp)->fill_probe(event, probe_jet);
-      }
-
-    }
-  }
-  */
   //subjet_btagwAK8->process(event);
 
   // if(probejet_pt > 300 && probejet_pt < 400 ) subjet_btagwAK8_300to400->process(event);

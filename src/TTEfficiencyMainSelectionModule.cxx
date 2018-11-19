@@ -80,7 +80,6 @@ private:
   std::vector<std::unique_ptr<ProbeJetHists>> h_tau32, h_tau32_mass, h_tau32_btag, h_tau32_mass_btag, h_tau32_mass_btag_pt400to550, h_tau32_mass_btag_pt550, h_tau32_mass_btag_pt400;
 
   bool useHTT, usePUPPI;
-  // bool subjet_correction;
   string version;
 
   bool isMC;
@@ -117,12 +116,6 @@ TTEfficiencyMainSelectionModule::TTEfficiencyMainSelectionModule(Context & ctx){
 
   string merged = ctx.get("MergedSelection", "<not set>");
 
-  //subjet_correction = false; 
-  //string correction_mode = ctx.get("TopJetCorrectionMode", "<not set>");
-  //if (correction_mode == "SUB") {
-  //  subjet_correction = true; 
-  //  cout << "use AK4 correction on subjets to get the groomed topjet." << endl;
-  //}
 
 
   //=============================
@@ -197,17 +190,13 @@ TTEfficiencyMainSelectionModule::TTEfficiencyMainSelectionModule(Context & ctx){
     // reweighting_modules.emplace_back(new TopPtReweight(ctx, 0.0615, -0.0005, "ttbargen", "weight_ttbar", true)); //13TeV
   }
 
-  // if (version == "TTbar_Incl" ) mttgen_sel.reset(new MttbarGenSelection(0., 700.));
-
   //  btagwAK8.reset(new MCBTagScaleFactor(ctx, CSVBTag::WP_LOOSE, "jets","central","mujets","incl","MCBtagEfficiencies"));
   //btagwAK8.reset(new MCBTagScaleFactor(ctx, CSVBTag::WP_MEDIUM, "jets","central","mujets","incl","MCBtagEfficiencies"));
 
-  //subjet_btagwAK8.reset(new MCBTagScaleFactor(ctx, CSVBTag::WP_LOOSE, "topjets","central","lt","incl","MCSubjetBtagEfficiencies","", "SubjetBTagCalibration"));//,"SubjetBTagCalibration"));
-
-  //muo_tight_noniso_SF.reset(new MCMuonScaleFactor(ctx,"/nfs/dust/cms/user/dreyert/CMSSW_8_0_24_patch1/src/UHH2/common/data//MuonID_EfficienciesAndSF_average_RunBtoH.root","MC_NUM_TightID_DEN_genTracks_PAR_pt_eta",1, "tightID"));
-  //muo_trigger_SF.reset(new MCMuonScaleFactor(ctx,"/nfs/dust/cms/user/dreyert/CMSSW_8_0_24_patch1/src/UHH2/common/data//MuonTrigger_EfficienciesAndSF_average_RunBtoH.root","IsoMu50_OR_IsoTkMu50_PtEtaBins",1, "muonTrigger"));
-  //muo_medium_noniso_SF.reset(new MCMuonScaleFactor(ctx,"/nfs/dust/cms/user/dreyert/CMSSW_8_0_24_patch1/src/UHH2/common/data/MuonID_EfficienciesAndSF_average_RunBtoH.root","MC_NUM_MediumID2016_DEN_genTracks_PAR_pt_eta",1, "mediumID"));
-  
+  // muo_tight_SF.reset(new MCMuonScaleFactor(ctx,"/nfs/dust/cms/user/dreyert/Analysis94X_v1/CMSSW_9_4_1/src/UHH2/common/data/MuonID_94X_RunBCDEF_SF_ID.root","NUM_TightID_DEN_genTracks",0., "tightID", false, "central"));
+  //  cout << "muonID done" << endl;
+  // muo_trigger_SF.reset(new MCMuonScaleFactor(ctx,"/nfs/dust/cms/user/dreyert/Analysis94X_v1/CMSSW_9_4_1/src/UHH2/common/data/MuonTrigger_EfficienciesAndSF_RunBtoF_Nov17Nov2017.root","Mu50_PtEtaBins",0., "muonTrigger", false,  "central"));
+ 
  
   //=============================
   //selections 
@@ -234,19 +223,19 @@ TTEfficiencyMainSelectionModule::TTEfficiencyMainSelectionModule(Context & ctx){
   dilepton_selection.reset( new DecayChannelSelection(ctx, "ttbargen", "dilepton"));
   tau_jets_selection.reset( new DecayChannelSelection(ctx, "ttbargen", "tau_jets"));
 
-  double jet_radius = 0.;
-  if (useHTT) jet_radius = 1.5; 
-  else jet_radius = 0.8; 
+  //double jet_radius = 0.;
+  //if (useHTT) jet_radius = 1.5; 
+  //else jet_radius = 0.8; 
 
   //merged selections
-  merged_selection.reset( new MergedSelection(ctx, "ttbargen", jet_radius));
-  mergedW_selection.reset( new MergedSelection(ctx, "ttbargen", jet_radius, MergedSelection::oMergedW));
-  mergedQB_selection.reset( new MergedSelection(ctx, "ttbargen", jet_radius, MergedSelection::oBplusQ));
+  //merged_selection.reset( new MergedSelection(ctx, "ttbargen", jet_radius));
+  //mergedW_selection.reset( new MergedSelection(ctx, "ttbargen", jet_radius, MergedSelection::oMergedW));
+  //mergedQB_selection.reset( new MergedSelection(ctx, "ttbargen", jet_radius, MergedSelection::oBplusQ));
 
 
   //mass diff selection
-  massDiff_selection.reset( new MassDiffSelection() );
-  dphi_selection.reset(new DPhiMuBSelection(CSVBTag(CSVBTag::WP_MEDIUM), 1.2));
+  // massDiff_selection.reset( new MassDiffSelection() );
+  // dphi_selection.reset(new DPhiMuBSelection(CSVBTag(CSVBTag::WP_MEDIUM), 1.2));
        
 
   //=============================         
@@ -275,9 +264,6 @@ TTEfficiencyMainSelectionModule::TTEfficiencyMainSelectionModule(Context & ctx){
 
 
 bool TTEfficiencyMainSelectionModule::process(Event & event) {
-   
-  // if(version == "TTbar_Incl" && event.run == 1 && event.event == 67315776) return false;
-  //  if(version == "TTbar_1000toInf" && event.run == 1 && event.event == 185748260) return false;
   
  //=============================         
   //apply top pt reweighting
@@ -296,26 +282,19 @@ bool TTEfficiencyMainSelectionModule::process(Event & event) {
   //=============================         
   bool ok = common->process(event);
   if(!ok) return false;
-  
-  // if(subjet_correction) {
-  //  topjet_corr->process(event); //apply topjet and subjet corrections first 
-  //  topjet_groomer->process(event); //now get the subjet sum from corrected subjets
-  //}else{
-    //    topjet_groomer->process(event); //get the subjet sum from uncorrected subjets (sets the JEC_Raw for the topjet to 1)
+ 
   topjet_corr->process(event); //apply AK8 corrections on the full jet and AK4 corrections on the subjets
   if(isMC) topjetJER_smearer->process(event);
-    // } 
-
 
   //=============================         
   //run cleaners
   //=============================       
   jet_cleaner->process(event);
   topjet_cleaner->process(event);
-  topjet_cleaner_dRlep->process(event); //remove topjets that overlap with a lepton (e/mu)
+  //topjet_cleaner_dRlep->process(event); //remove topjets that overlap with a lepton (e/mu)
   
    // muo_medium_noniso_SF->process(event);
-  // muo_tight_noniso_SF->process(event);
+  // muo_tight_SF->process(event);
   
 
   //======================================        
@@ -342,8 +321,6 @@ bool TTEfficiencyMainSelectionModule::process(Event & event) {
   //====================================================         
   //apply b tagging scale factors after the selection
   //==================================================== 
-        
-  // muo_trigger_SF->process(event);
   // btagwAK8->process(event);
   
 

@@ -114,15 +114,6 @@ bool TTEfficiencyPreSelectionModule::process(Event & event) {
   //keep uncleaned jets and MET
   std::unique_ptr< std::vector<Jet> >    uncleaned_jets   (new std::vector<Jet>   (*event.jets));
   std::unique_ptr<MET> uncleaned_met(new MET(*event.met));
-   /* 
-  for(const auto & mu : *event.muons){
-     cout << "-----" << endl;
-    cout << (uint64_t(1) << static_cast<uint64_t>(Muon::CutBasedIdTight)) << endl;
-    cout << (uint64_t(1) << static_cast<uint64_t>(Muon::CutBasedIdMedium)) << endl;
-    cout << (uint64_t(1) << static_cast<uint64_t>(Muon::CutBasedIdLoose)) << endl;
-    cout << mu.sel_bits << endl;
-    cout << mu.get_selector(Muon::CutBasedIdTight) << endl;
-  }*/
 
   //run corrections
   bool ok = common->process(event);
@@ -134,7 +125,6 @@ bool TTEfficiencyPreSelectionModule::process(Event & event) {
   //apply selections
   if(!pre_selection->passes(event)) return false;
   if(!met_sel->passes(event)) return false;
-  //  if(!htlep_sel->passes(event)) return false;
   if(!ptW_sel->passes(event)) return false;
 
   // store uncleaned jets and MET
