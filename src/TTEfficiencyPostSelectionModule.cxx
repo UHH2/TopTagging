@@ -405,19 +405,11 @@ bool TTEfficiencyPostSelectionModule::process(Event & event) {
 
   scale_variation->process(event);
 
+  ps_weights->process(event);
+
   for(auto & h : hists_after_sel){
     h->fill(event);
   }
-  /*
-  for(const auto jet: *event.topjets){
-    for(const auto & subjet : jet.subjets()){
-      cout << subjet.hadronFlavor() <<endl;
-    }
-  }
-    if(jet.pt()>400. && jet.pt()<500.) cout << "Pt: " << jet.pt() << "JEC: " << 1./jet.JEC_factor_raw() << endl;
-    break;
-  }
-  */
 
   //=====================
   //get the probe jet
