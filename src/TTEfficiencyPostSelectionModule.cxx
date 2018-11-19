@@ -204,18 +204,22 @@ TTEfficiencyPostSelectionModule::TTEfficiencyPostSelectionModule(Context & ctx){
     if(TopPtReweighting) reweighting_modules.emplace_back(new TopPtReweight(ctx, 0.0615, -0.0005, "ttbargen", "weight_ttbar", true)); //13TeV
   }
 
-  //  btagwAK8.reset(new MCBTagScaleFactor(ctx, CSVBTag::WP_LOOSE, "jets","central","mujets","incl","MCBtagEfficiencies"));
-  btagwAK8.reset(new MCBTagScaleFactor(ctx, CSVBTag::WP_MEDIUM, "jets", BTag_variation,"mujets","incl","MCBtagEfficiencies"));
-  /*
-  subjet_btagwAK8.reset(new MCBTagScaleFactor(ctx, CSVBTag::WP_LOOSE, "topjets", BTag_variation,"lt","incl","MCSubjetBtagEfficiencies","", "SubjetBTagCalibration"));//,"SubjetBTagCalibration"));
-  subjet_btagwAK8_300to400.reset(new MCBTagScaleFactor(ctx, CSVBTag::WP_LOOSE, "topjets",BTag_variation,"lt","incl","MCSubjetBtagEfficiencies_300to400","", "SubjetBTagCalibration"));
-  subjet_btagwAK8_400to480.reset(new MCBTagScaleFactor(ctx, CSVBTag::WP_LOOSE, "topjets",BTag_variation,"lt","incl","MCSubjetBtagEfficiencies_400to480","", "SubjetBTagCalibration"));
-  subjet_btagwAK8_480to600.reset(new MCBTagScaleFactor(ctx, CSVBTag::WP_LOOSE, "topjets",BTag_variation,"lt","incl","MCSubjetBtagEfficiencies_480to600","", "SubjetBTagCalibration"));
-  subjet_btagwAK8_600.reset(new MCBTagScaleFactor(ctx, CSVBTag::WP_LOOSE,  "topjets",BTag_variation,"lt","incl","MCSubjetBtagEfficiencies_600","", "SubjetBTagCalibration"));
-  */
 
-  muo_tight_noniso_SF.reset(new MCMuonScaleFactor(ctx,"/nfs/dust/cms/user/dreyert/CMSSW_8_0_24_patch1/src/UHH2/common/data//MuonID_EfficienciesAndSF_average_RunBtoH.root","MC_NUM_TightID_DEN_genTracks_PAR_pt_eta",1, "tightID", true, MuonID_variation));
-  muo_trigger_SF.reset(new MCMuonScaleFactor(ctx,"/nfs/dust/cms/user/dreyert/CMSSW_8_0_24_patch1/src/UHH2/common/data//MuonTrigger_EfficienciesAndSF_average_RunBtoH.root","IsoMu50_OR_IsoTkMu50_PtEtaBins",1, "muonTrigger", true, MuonTrigger_variation));
+  //define muon b tagging scale factors 
+  if(!runMistag){
+    //  btagwAK8.reset(new MCBTagScaleFactor(ctx, CSVBTag::WP_LOOSE, "jets","central","mujets","incl","MCBtagEfficiencies"));
+    btagwAK8.reset(new MCBTagScaleFactor(ctx, CSVBTag::WP_MEDIUM, "jets", BTag_variation,"mujets","incl","MCBtagEfficiencies"));
+    /*
+      subjet_btagwAK8.reset(new MCBTagScaleFactor(ctx, CSVBTag::WP_LOOSE, "topjets", BTag_variation,"lt","incl","MCSubjetBtagEfficiencies","", "SubjetBTagCalibration"));//,"SubjetBTagCalibration"));
+      subjet_btagwAK8_300to400.reset(new MCBTagScaleFactor(ctx, CSVBTag::WP_LOOSE, "topjets",BTag_variation,"lt","incl","MCSubjetBtagEfficiencies_300to400","", "SubjetBTagCalibration"));
+      subjet_btagwAK8_400to480.reset(new MCBTagScaleFactor(ctx, CSVBTag::WP_LOOSE, "topjets",BTag_variation,"lt","incl","MCSubjetBtagEfficiencies_400to480","", "SubjetBTagCalibration"));
+      subjet_btagwAK8_480to600.reset(new MCBTagScaleFactor(ctx, CSVBTag::WP_LOOSE, "topjets",BTag_variation,"lt","incl","MCSubjetBtagEfficiencies_480to600","", "SubjetBTagCalibration"));
+      subjet_btagwAK8_600.reset(new MCBTagScaleFactor(ctx, CSVBTag::WP_LOOSE,  "topjets",BTag_variation,"lt","incl","MCSubjetBtagEfficiencies_600","", "SubjetBTagCalibration"));
+    */
+
+    muo_tight_noniso_SF.reset(new MCMuonScaleFactor(ctx,"/nfs/dust/cms/user/dreyert/CMSSW_8_0_24_patch1/src/UHH2/common/data//MuonID_EfficienciesAndSF_average_RunBtoH.root","MC_NUM_TightID_DEN_genTracks_PAR_pt_eta",1, "tightID", true, MuonID_variation));
+    muo_trigger_SF.reset(new MCMuonScaleFactor(ctx,"/nfs/dust/cms/user/dreyert/CMSSW_8_0_24_patch1/src/UHH2/common/data//MuonTrigger_EfficienciesAndSF_average_RunBtoH.root","IsoMu50_OR_IsoTkMu50_PtEtaBins",1, "muonTrigger", true, MuonTrigger_variation));
+  }
  
   scale_variation.reset(new MCScaleVariation(ctx));
 
