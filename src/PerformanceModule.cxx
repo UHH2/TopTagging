@@ -148,7 +148,7 @@ PerformanceModule::PerformanceModule(Context & ctx){
   _flatTree->Branch("gen_pdgId", &gen_pdgId, "gen_pdgId/I");
 
   if(useHOTVR){
-    _flatTree->Branch("dr_jet" , &dr_jet, "dr_jet/D");
+    // _flatTree->Branch("dr_jet" , &dr_jet, "dr_jet/D");
     _flatTree->Branch("clf_Nsubjets" , &clf_Nsubjets, "clf_Nsubjets/I");
     _flatTree->Branch("clf_jetmass" , &clf_jetmass, "clf_jetmass/D");
     _flatTree->Branch("clf_fpt" , &clf_fpt, "clf_fpt/D");
@@ -211,6 +211,8 @@ bool PerformanceModule::process(Event & event){
     topjetJER_smearer->process(event);
   }
 
+  sort_by_pt(*event.topjets);
+
   // particles
   vector<GenObject> parts;
 
@@ -261,12 +263,7 @@ bool PerformanceModule::FillTree(const Event & event, GenObject g_part, int Npar
   // double maxPt = 1.;
   for( const auto & topjet : topjets){
     double dR = deltaR( topjet.v4(), part.v4());
-    if(useHOTVR){
-      /*   cout << "jet pt: " << topjet.pt() << endl;
-	   for( const auto & subj : topjet.subjets()){
-	   cout << "  subjet pt: " << subj.pt() << endl;
-	   }
-      */
+    /* if(useHOTVR){
       radius = 600./topjet.pt();
       if(radius < 0.1) radius = 0.1;
       if(radius > 1.5) radius = 1.5;
@@ -279,18 +276,18 @@ bool PerformanceModule::FillTree(const Event & event, GenObject g_part, int Npar
 	//maxPt = topjet.pt();
 	matchedJet = true;
       }
-    }else{
-      if(dR < radius){
-	if(dR < mindR){
-	  //if(topjet.pt() > maxPt){
-	  if(matchedJet) cout << "more than one jet to match" << endl;
-	  jet = topjet;
-	  mindR = dR;
-	  //maxPt = topjet.pt();
-	  matchedJet = true;
-	}
+      }else{*/
+    if(dR < radius){
+      if(dR < mindR){
+	//if(topjet.pt() > maxPt){
+	if(matchedJet) cout << "more than one jet to match" << endl;
+	jet = topjet;
+	mindR = dR;
+	//maxPt = topjet.pt();
+	matchedJet = true;
       }
-    } 
+    }
+    // } 
   }
  
   // if(!matchedJet){
