@@ -41,6 +41,8 @@ private:
     
   //correctors
   std::unique_ptr<CommonModules> common;
+  std::unique_ptr<uhh2::AnalysisModule> topjet_corr; //for mistag HOTVR
+  std::unique_ptr<TopJetGroomer> topjet_groomer;//for mistag HOTVR
 
   //reweighting and scale factors
   std::vector<std::unique_ptr<AnalysisModule>> reweighting_modules;
@@ -82,6 +84,7 @@ private:
   //variables and functions
   string mass_scale;
   bool useHTT, usePUPPI, useHOTVR;
+  bool runMistag;
   string version;
   bool fill_PDF;
   bool isMC;
@@ -118,8 +121,6 @@ TTEfficiencyPostSelectionModule::TTEfficiencyPostSelectionModule(Context & ctx){
   else if(useHOTVR) cout << "run HOTVR" << endl;
   else cout << "run CMS tagger" << endl;
 
-
-
   version = ctx.get("dataset_version", "");
 
   string merged = ctx.get("MergedSelection", "<not set>");
@@ -152,6 +153,11 @@ TTEfficiencyPostSelectionModule::TTEfficiencyPostSelectionModule(Context & ctx){
   bool TopPtReweighting = false;
   TopPtReweighting = (ctx.get("TopPtReweight","FALSE")== "TRUE");
 
+  runMistag = false;
+  runMistag= (ctx.get("Mistag","FALSE")== "TRUE");
+
+  if(runMistag) cout << "run mistag selection" << endl; 
+
   mass_scale = "default";
   mass_scale = ctx.get("mass_scale","default");
 
@@ -170,7 +176,22 @@ TTEfficiencyPostSelectionModule::TTEfficiencyPostSelectionModule(Context & ctx){
   common->disable_jetpfidfilter();
   common->init(ctx, PU_variation);
   cout << "common init" <<endl;
- 
+
+  //===========================
+  //JEC for HOTVR mistag mode
+  //===========================
+
+   if(useHOTVR){
+    // if(usePUPPI) topjet_corr.reset(new TopJetCorrectionModules(ctx, TopJetCorrectionModules::HOTVR_PUPPI));
+    // else topjet_corr.reset(new TopJetCorrectionModules(ctx, TopJetCorrectionModules::HOTVR_CHS));
+    if(usePUPPI) topjet_corr.reset(new TopJetCorrectionModules(ctx, TopJetCorrectionModules::AK8_PUPPI));
+    else topjet_corr.reset(new TopJetCorrectionModules(ctx, TopJetCorrectionModules::AK8_CHS));
+  }else{
+    if(usePUPPI) topjet_corr.reset(new TopJetCorrectionModules(ctx, TopJetCorrectionModules::AK8_PUPPI));
+    else topjet_corr.reset(new TopJetCorrectionModules(ctx, TopJetCorrectionModules::AK8_CHS));
+  }
+
+   topjet_groomer.reset(new TopJetGroomer());
 
   //==============================
   //reweighting and scale factors
@@ -384,15 +405,25 @@ bool TTEfficiencyPostSelectionModule::process(Event & event) {
   bool ok = common->process(event);
   if(!ok) return false;
 
+  //top jet JEC only for mistag selection (not applied before)
+  if(runMistag && useHOTVR){
+    topjet_corr->process(event); //apply AK8 corrections on the full jet and AK4 corrections on the subjets OR apply HOTVR corrections
+    if(useHOTVR) topjet_groomer->process(event);
+    if(isMC && !useHOTVR) topjetJER_smearer->process(event);
+  }
+
   //apply top pt reweighting
   for (auto & rew : reweighting_modules) {
     rew->process(event);
   }
   
   //apply muon b tagging scale factors 
-  muo_tight_noniso_SF->process(event);
-  muo_trigger_SF->process(event);
-  btagwAK8->process(event);
+  if(!runMistag){
+
+    muo_tight_noniso_SF->process(event);
+    muo_trigger_SF->process(event);
+    btagwAK8->process(event);
+  }
 
   scale_variation->process(event);
 
@@ -404,19 +435,27 @@ bool TTEfficiencyPostSelectionModule::process(Event & event) {
   //=====================
   //get the probe jet
   //=====================
-
-  std::vector<TopJet>* topjets = event.topjets;
-  std::vector<Muon>* muons = event.muons;
   TopJet probe_jet; 
   bool probejet_found = false;
 
-  for(auto & topjet : *topjets){
-    double pi = 3.14159265359;
-    double delPhi = deltaPhi(topjet, muons->at(0));
-    if(delPhi > ((2./3.)*pi)){
-      probe_jet = topjet;
+  std::vector<TopJet> topjets = *event.topjets;
+  sort_by_pt(topjets);
+
+  if(runMistag){
+    if(topjets.size()){
+      probe_jet = topjets.at(0);
       probejet_found = true;
-      break;
+    }
+  }else{ 
+    std::vector<Muon>* muons = event.muons;
+    for(auto & topjet : topjets){
+      double pi = 3.14159265359;
+      double delPhi = deltaPhi(topjet, muons->at(0));
+      if(delPhi > ((2./3.)*pi)){
+	probe_jet = topjet;
+	probejet_found = true;
+	break;
+      }
     }
   }
 
@@ -424,6 +463,8 @@ bool TTEfficiencyPostSelectionModule::process(Event & event) {
     //   cout << "WARNING: no probe jet found"<< endl;
     return false;
   }
+
+  if(runMistag && probe_jet.pt() < 200) return false;
 
   /*
   //throw away all other AK8Jets for Subjet-Btagging SFs
@@ -464,9 +505,9 @@ bool TTEfficiencyPostSelectionModule::process(Event & event) {
     return true;  //don't fill the CMSTopTagger histograms
   }
  
-  //=================================
-  //define working points and tags
-  //=================================
+  //=============================================
+  //define working points for the CMSTopTaggerV2
+  //=============================================
 
   double probejet_tau32 = probe_jet.tau3()/probe_jet.tau2();
 
@@ -490,10 +531,10 @@ bool TTEfficiencyPostSelectionModule::process(Event & event) {
   if(usePUPPI && probejet_mass > 105 && probejet_mass < 210) mass_cut = true;
   else if(!usePUPPI && probejet_mass > 105 && probejet_mass < 220) mass_cut = true;
 
-  if(probejet_mass < 10) return false; //mild mass cut on the denominator 
+  if(!runMistag && probejet_mass < 10) return false; //mild mass cut on the denominator 
 
   //===================
-  //new working points
+  //working points
   //===================
 
   std::vector<bool> toptag, toptag_mass, toptag_btag, toptag_mass_btag;
@@ -533,7 +574,7 @@ bool TTEfficiencyPostSelectionModule::process(Event & event) {
   
   
   //=======================
-  //fill the new histograms
+  //fill the histograms
   //=======================
 
   hists_all->fill_probe(event, probe_jet);
