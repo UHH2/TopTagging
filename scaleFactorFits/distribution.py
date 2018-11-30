@@ -170,7 +170,7 @@ class distribution(object):
             for bin in range(1,h_shift.GetNbinsX()+1):
                 h_shift.SetBinContent(bin, math.sqrt(self.d_cov_sys[key].GetBinContent(bin,bin)))
 
-            sys_shift = self.d_shift_sy[key]
+            sys_shift = self.d_shift_sys[key]
                 
             h_up = self.distr.Clone("h_up")
             h_up.Add(sys_shift)
