@@ -26,6 +26,8 @@ ProbeJetHists::ProbeJetHists(Context & ctx, const string & dirname): Hists(ctx, 
   book<TH1F>("pt", "Probe jet p_{T} [GeV]", 200, 0., 2000);
   book<TH1F>("eta", "Probe jet #eta", 32, -3.2, 3.2);
 
+  book<TH1F>("pt_W", "leptonic W p_{T} [GeV]", 100,0.,1000.);
+
   book<TH1F>("mass", "Probe jet mass [GeV]", 50, 0, 500);
   book<TH1F>("mass_sub", "Soft drop mass [GeV]", 100, 0, 500);
 
@@ -70,6 +72,11 @@ ProbeJetHists::ProbeJetHists(Context & ctx, const string & dirname): Hists(ctx, 
       book<TH1F>("mass_sub_PDF_"+std::to_string(i), "Soft drop mass [GeV]", 100, 0, 500);
     }
   }
+  
+  //additional variables
+  book<TH1F>("dPhi_mu_probe", "#Delta#Phi(#mu, probe-jet)", 50, -1, 4);
+  book<TH1F>("dPhi_mu_b", "min #Delta#Phi(#mu, b-jet)", 50, -1, 4);
+
   /*    
   //additional variables
 
@@ -109,6 +116,18 @@ void ProbeJetHists::fill(const Event & event){
   
   // Don't forget to always use the weight when filling.
   double weight = event.weight;
+
+  TVector2 muon;
+  muon.SetMagPhi(event.muons->at(0).pt(), event.muons->at(0).phi());
+
+  TVector2 met;
+  met.SetMagPhi(event.met->pt(), event.met->phi());
+
+  TVector2 W = muon+met;
+ 
+  double ptW = W.Mod();
+
+  hist("pt_W")->Fill(ptW, weight);
 
   hist("npv")->Fill(event.pvs->size(), weight);
   hist("pt")->Fill(jet.pt(), weight);
@@ -227,12 +246,12 @@ void ProbeJetHists::fill(const Event & event){
   }
 
  
-  /*
+ 
   //======================
   //additoinal hists 
   //======================
 
-  h_tau32_vs_pt->Fill(jet.pt(),jet.tau3()/jet.tau2(),weight);
+  // h_tau32_vs_pt->Fill(jet.pt(),jet.tau3()/jet.tau2(),weight);
 
   //get the muon
   Muon mu = event.muons->at(0);
@@ -257,7 +276,7 @@ void ProbeJetHists::fill(const Event & event){
 
   for( const auto & ak4jet : *ak4jets){
     Jet b_candidate;
-    if( btag(ak4jet, event) && (deltaPhi(ak4jet,mu) < (2*pi/3)) ){
+    if( btag(ak4jet, event) ) { //&& (deltaPhi(ak4jet,mu) < (2*pi/3)) ){
       b_candidate = ak4jet;
       b_candidate_found = true; 
     }
@@ -280,14 +299,16 @@ void ProbeJetHists::fill(const Event & event){
     }
   } 
 
-  bjet = bjet_max_pt; //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  // bjet = bjet_max_pt; //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  hist("dPhi_mu_b")->Fill(deltaPhi(bjet, mu), weight);
+  hist("dPhi_mu_probe")->Fill(deltaPhi(jet, mu), weight);
 
   if(!b_candidate_found) cout << "No Bjet candidate found in event:  " << event.event << endl;
   if(!bjet_found) cout << "No Bjet found in event: " << event.event << endl;
   if(!bjet_max_CSV_found) cout << "No leading Bjet found in event: " << event.event << endl;
   if(!bjet_max_pt_found) cout << "No Bjet with highest CSV found in event: " << event.event << endl;
 
- 
+  /*
   if(bjet_found){
     //get the leding additional jets
     // Jet add_jet;
