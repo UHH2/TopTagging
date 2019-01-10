@@ -28,6 +28,8 @@ ProbeJetHists::ProbeJetHists(Context & ctx, const string & dirname): Hists(ctx, 
 
   book<TH1F>("pt_subjets", "subjet p_{T} [GeV]", 100,0.,1000.);
 
+  book<TH1F>("pt_W", "leptonic W p_{T} [GeV]", 100,0.,1000.);
+
   book<TH1F>("mass", "Probe jet mass [GeV]", 50, 0, 500);
   book<TH1F>("mass_sub", "Soft drop mass [GeV]", 100, 0, 500);
 
@@ -55,6 +57,9 @@ ProbeJetHists::ProbeJetHists(Context & ctx, const string & dirname): Hists(ctx, 
   book<TH1F>("subCSV_highest", "highest subjet CSV discriminator", 100, 0., 1.); 
   book<TH1F>("CSV_topjet", "CSV discriminator Top Jet", 100, 0., 1.);
 
+  book<TH1F>("subDeepCSV", "subjets DeepCSV discriminator", 100, 0., 1.);  
+  book<TH1F>("subDeepCSV_highest", "highest subjet DeepCSV discriminator", 100, 0., 1.);
+
   book<TH1F>("subjetPT", "PT of subjet with highest CSV", 100, 0., 1500.);
   book<TH1F>("subjethadronFlavor", "hadronFlavour of subjet with highest CSV", 100, 0., 1.);
 
@@ -67,6 +72,8 @@ ProbeJetHists::ProbeJetHists(Context & ctx, const string & dirname): Hists(ctx, 
   }
     
   //additional variables
+  book<TH1F>("dPhi_mu_probe", "#Delta#Phi(#mu, probe-jet)", 50, -1, 4);
+  book<TH1F>("dPhi_mu_b", "min #Delta#Phi(#mu, b-jet)", 50, -1, 4);
 
   //bjet close to muon
   book<TH1F>("mProbe_mLep_bjet1", "m_{probe jet}/m_{b-jet+#mu}", 100, 0., 10.);
@@ -102,6 +109,18 @@ void ProbeJetHists::fill(const Event & event){
   
   // Don't forget to always use the weight when filling.
   double weight = event.weight;
+
+  TVector2 muon;
+  muon.SetMagPhi(event.muons->at(0).pt(), event.muons->at(0).phi());
+
+  TVector2 met;
+  met.SetMagPhi(event.met->pt(), event.met->phi());
+
+  TVector2 W = muon+met;
+ 
+  double ptW = W.Mod();
+
+  hist("pt_W")->Fill(ptW, weight);
 
   hist("npv")->Fill(event.pvs->size(), weight);
   hist("pt")->Fill(jet.pt(), weight);
@@ -180,20 +199,30 @@ void ProbeJetHists::fill(const Event & event){
   double highestCSV = 0;
   double pt_highestCSV = 0;
 
+  double highestDeepCSV = 0;
+  double pt_highestDeepCSV = 0;
+
   double highestSubjetMass = 0.;
   double lowestSubjetMass = 1000.;
 
   for (const auto subjet : subjets) {
     hist("subCSV")->Fill(subjet.btag_combinedSecondaryVertex(), weight);
+    hist("subDeepCSV")->Fill(subjet.btag_DeepCSV(), weight);
     // hist("subCSV_minus", "CSV discriminator", 100, -12., 12.); 
     if(subjet.btag_combinedSecondaryVertex() > highestCSV){
       highestCSV = subjet.btag_combinedSecondaryVertex();
       pt_highestCSV = subjet.pt();
     }
+    if(subjet.btag_DeepCSV() > highestDeepCSV){
+      highestDeepCSV = subjet.btag_DeepCSV();
+      pt_highestDeepCSV = subjet.pt();
+    }
+    
     if(subjet.v4().M() > highestSubjetMass) highestSubjetMass = subjet.v4().M();
     if(subjet.v4().M() < lowestSubjetMass) lowestSubjetMass = subjet.v4().M();
   }
   hist("subCSV_highest")->Fill(highestCSV, weight);
+  hist("subDeepCSV_highest")->Fill(highestDeepCSV, weight);
   hist("subjetPT")->Fill(pt_highestCSV, weight);
 
   
@@ -244,7 +273,7 @@ void ProbeJetHists::fill(const Event & event){
 
   for( const auto & ak4jet : *ak4jets){
     Jet b_candidate;
-    if( btag(ak4jet, event) && (deltaPhi(ak4jet,mu) < (2*pi/3)) ){
+    if( btag(ak4jet, event) ){//&& (deltaPhi(ak4jet,mu) < (2*pi/3)) ){
       b_candidate = ak4jet;
       b_candidate_found = true; 
     }
@@ -267,7 +296,9 @@ void ProbeJetHists::fill(const Event & event){
     }
   } 
 
-  bjet = bjet_max_pt; //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  // bjet = bjet_max_pt; //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  hist("dPhi_mu_b")->Fill(deltaPhi(bjet, mu), weight);
+  hist("dPhi_mu_probe")->Fill(deltaPhi(jet, mu), weight);
 
   if(!b_candidate_found) cout << "No Bjet candidate found in event:  " << event.event << endl;
   if(!bjet_found) cout << "No Bjet found in event: " << event.event << endl;
